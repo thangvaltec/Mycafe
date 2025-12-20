@@ -1,0 +1,7 @@
+{
+  "name": "Hệ Thống Gọi Món Cafe QR",
+  "description": "Hệ thống quản lý và gọi món qua mã QR dành cho quán Cafe tại Việt Nam, tích hợp đầy đủ tính năng cho khách hàng và quản trị viên.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
