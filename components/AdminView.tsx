@@ -15,26 +15,29 @@ interface AdminViewProps {
   categories: Category[];
   orders: Order[];
   expenses: Expense[];
-  onAddProduct: (p: Product) => void;
+  onAddProduct: (p: Partial<Product>) => void;
   onUpdateProduct: (p: Product) => void;
   onDeleteProduct: (id: string) => void;
   onUpdateTable: (t: Table) => void;
+  onDeleteTable: (id: number) => void;
   onUpdateOrder: (o: Order) => void;
-  onAddExpense: (e: Expense) => void;
+  onAddExpense: (e: Partial<Expense>) => void;
   onPlaceOrder: (tableId: string, items: OrderItem[]) => void;
   onAddTable: () => void;
   onSetOrders: (orders: Order[]) => void;
   onSetExpenses: (expenses: Expense[]) => void;
   onSetTables: (tables: Table[]) => void;
-  onAddCategory: (c: Category) => void;
+  onAddCategory: (c: Partial<Category>) => void;
   onUpdateCategory: (c: Category) => void;
   onDeleteCategory: (id: string) => void;
+  onLogout: () => void;
 }
 
-const AdminView: React.FC<AdminViewProps> = ({ 
-  tables, products, categories, orders, expenses, 
-  onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateTable, onUpdateOrder, onAddExpense, onPlaceOrder, onAddTable,
-  onSetOrders, onSetExpenses, onSetTables, onAddCategory, onUpdateCategory, onDeleteCategory
+const AdminView: React.FC<AdminViewProps> = ({
+  tables, products, categories, orders, expenses,
+  onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateTable, onDeleteTable, onUpdateOrder, onAddExpense, onPlaceOrder, onAddTable,
+  onSetOrders, onSetExpenses, onSetTables, onAddCategory, onUpdateCategory, onDeleteCategory,
+  onLogout
 }) => {
   const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'orders' | 'menu' | 'expenses' | 'report'>('pos');
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
@@ -67,12 +70,13 @@ const AdminView: React.FC<AdminViewProps> = ({
           </div>
           <div className="w-10"></div>
         </div>
-        <CustomerView 
+        <CustomerView
           table={currentOrderingTable as Table}
           products={products}
           categories={categories}
           activeOrder={orders.find(o => o.tableId === currentOrderingTable.id && o.status !== OrderStatus.PAID)}
           onPlaceOrder={handleStaffPlaceOrder}
+          compact
         />
       </div>
     );
@@ -85,15 +89,15 @@ const AdminView: React.FC<AdminViewProps> = ({
         <div className="hidden lg:flex flex-col items-center xl:items-start gap-4 p-8 w-full border-b border-white/5">
           <div className="w-12 h-12 bg-[#C2A383] rounded-2xl flex items-center justify-center text-[#4B3621] text-2xl font-black">H</div>
           <div className="hidden xl:block">
-            <h1 className="font-black text-lg leading-none tracking-tighter">HERITAGE</h1>
+            <h1 className="font-black text-lg leading-none tracking-tighter">Com Cafe</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Hệ thống quản trị</p>
           </div>
         </div>
         <div className="flex flex-1 justify-around lg:flex-col lg:justify-start lg:p-4 gap-1 lg:gap-2 w-full">
           {[
-            { id: 'pos', icon: 'fa-table-cells', label: 'Tại quán' },
+            { id: 'pos', icon: 'fa-table-cells', label: 'Phục vụ' },
             { id: 'takeaway', icon: 'fa-bag-shopping', label: 'Mang về' },
-            { id: 'orders', icon: 'fa-receipt', label: 'Hóa đơn' },
+            { id: 'orders', icon: 'fa-receipt', label: 'Đơn hàng' },
             { id: 'menu', icon: 'fa-mug-hot', label: 'Thực đơn' },
             { id: 'expenses', icon: 'fa-wallet', label: 'Chi phí' },
             { id: 'report', icon: 'fa-chart-pie', label: 'Báo cáo' }
@@ -104,6 +108,17 @@ const AdminView: React.FC<AdminViewProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Logout Button */}
+        <div className="hidden lg:flex p-4 border-t border-white/5">
+          <button
+            onClick={onLogout}
+            className="w-full p-4 rounded-2xl flex items-center gap-4 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+          >
+            <i className="fas fa-sign-out-alt text-xl"></i>
+            <span className="hidden xl:block text-sm font-black whitespace-nowrap uppercase tracking-widest">Đăng xuất</span>
+          </button>
+        </div>
       </nav>
 
       {/* Content Area */}
@@ -111,49 +126,58 @@ const AdminView: React.FC<AdminViewProps> = ({
         <header className="h-16 lg:h-24 bg-white border-b border-gray-100 flex items-center justify-between px-6 lg:px-10 shrink-0 z-10">
           <div className="flex flex-col">
             <h2 className="text-lg lg:text-2xl font-black text-[#4B3621] uppercase tracking-tighter">
-              {activeTab === 'pos' && 'Vận hành tại quán'}
+              {activeTab === 'pos' && 'Phục vụ tại bàn'}
               {activeTab === 'takeaway' && 'Đơn hàng mang về'}
               {activeTab === 'orders' && 'Lịch sử hóa đơn'}
-              {activeTab === 'menu' && 'Danh mục thực đơn'}
+              {activeTab === 'menu' && 'Quản lý thực đơn'}
               {activeTab === 'expenses' && 'Chi phí vận hành'}
-              {activeTab === 'report' && 'Phân tích thông minh'}
+              {activeTab === 'report' && 'Báo cáo doanh thu'}
             </h2>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest lg:hidden">Heritage Coffee System</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest lg:hidden">Com Cafe Coffee System</p>
           </div>
-          
+
           <div className="flex items-center gap-6">
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-[8px] lg:text-[10px] text-gray-400 font-black uppercase tracking-widest italic">Doanh thu tổng</span>
               <span className="text-sm lg:text-xl font-black text-[#2D5A27]">{revenue.toLocaleString()}đ</span>
             </div>
+            <button
+              onClick={onLogout}
+              className="w-10 h-10 lg:w-14 lg:h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all border border-gray-100"
+              title="Đăng xuất"
+            >
+              <i className="fas fa-sign-out-alt"></i>
+            </button>
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 admin-scroll bg-[#F8F7F3]">
           {activeTab === 'pos' && (
-            <AdminPOS 
-              tables={tables} 
-              orders={orders} 
-              onUpdateTable={onUpdateTable} 
-              onUpdateOrder={onUpdateOrder} 
+            <AdminPOS
+              tables={tables}
+              orders={orders}
+              onUpdateTable={onUpdateTable}
+              onUpdateOrder={onUpdateOrder}
               onOpenOrderView={handleOpenOrderView}
               onAddTable={onAddTable}
+              onDeleteTable={onDeleteTable}
             />
           )}
           {activeTab === 'takeaway' && (
             <AdminTakeaway
               orders={orders}
+              tables={tables}
               onUpdateOrder={onUpdateOrder}
               onOpenOrderView={handleOpenOrderView}
             />
           )}
-          {activeTab === 'orders' && <AdminOrders orders={orders} tables={tables} onUpdateOrder={onUpdateOrder} onUpdateTable={onUpdateTable} onOpenOrderView={(id) => handleOpenOrderView(tables.find(t=>t.id===id)!)} />}
+          {activeTab === 'orders' && <AdminOrders orders={orders} tables={tables} onUpdateOrder={onUpdateOrder} onUpdateTable={onUpdateTable} onOpenOrderView={(id) => handleOpenOrderView(tables.find(t => t.id === id)!)} />}
           {activeTab === 'menu' && (
-            <AdminMenu 
-              products={products} 
-              categories={categories} 
-              onAddProduct={onAddProduct} 
-              onUpdateProduct={onUpdateProduct} 
+            <AdminMenu
+              products={products}
+              categories={categories}
+              onAddProduct={onAddProduct}
+              onUpdateProduct={onUpdateProduct}
               onDeleteProduct={onDeleteProduct}
               onAddCategory={onAddCategory}
               onUpdateCategory={onUpdateCategory}
@@ -162,11 +186,12 @@ const AdminView: React.FC<AdminViewProps> = ({
           )}
           {activeTab === 'expenses' && <AdminExpenses expenses={expenses} onAddExpense={onAddExpense} />}
           {activeTab === 'report' && (
-            <AdminReport 
-              orders={orders} 
-              expenses={expenses} 
-              onSetOrders={onSetOrders} 
-              onSetExpenses={onSetExpenses} 
+            <AdminReport
+              orders={orders}
+              expenses={expenses}
+              tables={tables}
+              onSetOrders={onSetOrders}
+              onSetExpenses={onSetExpenses}
               onSetTables={onSetTables}
             />
           )}

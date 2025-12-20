@@ -1,7 +1,7 @@
 
 import { Category, Product, Table } from './types';
 
-export const BANK_QR_IMAGE_URL = "https://img.vietqr.io/image/hdbank-999990-compact.jpg?accountName=HOANG%20THI%20TAM&amount=0&addInfo=Thanh%20toan%20Heritage%20Cafe";
+export const BANK_QR_IMAGE_URL = "https://img.vietqr.io/image/hdbank-999990-compact.jpg?accountName=HOANG%20THI%20TAM&amount=0&addInfo=Thanh%20toan%20Com%20Cafe";
 
 export const CATEGORIES: Category[] = [
   { id: 'c1', name: 'Cà Phê Truyền Thống' },
@@ -11,32 +11,32 @@ export const CATEGORIES: Category[] = [
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [
-  { 
-    id: 'p1', 
-    categoryId: 'c1', 
-    name: 'Phin Sữa Đá Đậm Đà', 
-    price: 35000, 
-    imageUrl: 'https://images.unsplash.com/photo-1544787210-2827255ec394?q=80&w=400&auto=format&fit=crop', 
-    isActive: true, 
-    description: 'Cà phê Robusta Buôn Ma Thuột pha phin truyền thống, hòa quyện sữa đặc thơm béo.' 
+  {
+    id: 'p1',
+    categoryId: 'c1',
+    name: 'Phin Sữa Đá Đậm Đà',
+    price: 35000,
+    imageUrl: 'https://images.unsplash.com/photo-1544787210-2827255ec394?q=80&w=400&auto=format&fit=crop',
+    isActive: true,
+    description: 'Cà phê Robusta Buôn Ma Thuột pha phin truyền thống, hòa quyện sữa đặc thơm béo.'
   },
-  { 
-    id: 'p2', 
-    categoryId: 'c1', 
-    name: 'Bạc Xỉu Sương Muối', 
-    price: 42000, 
-    imageUrl: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=400&auto=format&fit=crop', 
-    isActive: true, 
-    description: 'Vị cà phê nhẹ nhàng kết hợp sữa tươi và một chút muối hồng tinh tế.' 
+  {
+    id: 'p2',
+    categoryId: 'c1',
+    name: 'Bạc Xỉu Sương Muối',
+    price: 42000,
+    imageUrl: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=400&auto=format&fit=crop',
+    isActive: true,
+    description: 'Vị cà phê nhẹ nhàng kết hợp sữa tươi và một chút muối hồng tinh tế.'
   },
-  { 
-    id: 'p3', 
-    categoryId: 'c2', 
-    name: 'Trà Sen Vàng Macchiato', 
-    price: 55000, 
-    imageUrl: 'https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?q=80&w=400&auto=format&fit=crop', 
-    isActive: true, 
-    description: 'Cốt trà Ô Long thanh mát, sen vàng giòn ngọt và lớp kem béo ngậy.' 
+  {
+    id: 'p3',
+    categoryId: 'c2',
+    name: 'Trà Sen Vàng Macchiato',
+    price: 55000,
+    imageUrl: 'https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?q=80&w=400&auto=format&fit=crop',
+    isActive: true,
+    description: 'Cốt trà Ô Long thanh mát, sen vàng giòn ngọt và lớp kem béo ngậy.'
   }
 ];
 

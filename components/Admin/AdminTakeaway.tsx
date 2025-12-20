@@ -1,21 +1,32 @@
 
 import React, { useState } from 'react';
-import { Order, OrderStatus, PaymentMethod } from '../../types';
+import { Order, OrderStatus, PaymentMethod, Table } from '../../types';
 import { BANK_QR_IMAGE_URL } from '../../constants';
 import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
+import { api } from '../../services/api';
 
 interface AdminTakeawayProps {
   orders: Order[];
+  tables: Table[];
   onUpdateOrder: (o: Order) => void;
   onOpenOrderView: (table: { id: string, name: string, guestName?: string }) => void;
 }
 
-const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, onOpenOrderView }) => {
+const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, tables, onUpdateOrder, onOpenOrderView }) => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'method' | 'cash' | 'transfer'>('method');
   const [receivedAmountStr, setReceivedAmountStr] = useState<string>('');
 
-  const takeawayOrder = orders.find(o => o.tableId === 'MANG_VE' && o.status !== OrderStatus.PAID);
+  // Find the real "Mang về" table from database (by Alias or TableNumber)
+  const takeawayTable = tables.find(t => t.alias === 'Takeaway' || t.tableNumber === 'MV' || t.name.includes('Mang về'));
+  const takeawayTableId = takeawayTable?.id || '';
+
+  // Debug: Log if table not found
+  if (!takeawayTable && tables.length > 0) {
+    console.warn('⚠️ Không tìm thấy bàn "Mang về". Tables hiện có:', tables.map(t => ({ id: t.id, name: t.name, alias: t.alias, tableNumber: t.tableNumber })));
+  }
+
+  const takeawayOrder = orders.find(o => o.tableId === takeawayTableId && o.status !== OrderStatus.PAID);
   const receivedAmount = parseVND(receivedAmountStr);
 
   const startCheckout = () => {
@@ -25,20 +36,34 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
     setShowCheckoutModal(true);
   };
 
-  const finalizePayment = (method: PaymentMethod) => {
+  const finalizePayment = async (method: PaymentMethod) => {
     if (!takeawayOrder) return;
     const finalReceived = method === PaymentMethod.CASH ? receivedAmount : takeawayOrder.totalAmount;
     const change = Math.max(0, finalReceived - takeawayOrder.totalAmount);
-    
-    onUpdateOrder({ 
-      ...takeawayOrder, 
-      status: OrderStatus.PAID,
-      paymentMethod: method,
-      paymentAmount: finalReceived,
-      changeAmount: change
-    });
 
-    setShowCheckoutModal(false);
+    try {
+      await api.checkout(
+        takeawayOrder.id,
+        method,
+        finalReceived,
+        true // isOrderId = true
+      );
+
+      alert(`✅ Thanh toán mang về thành công!\n\nTổng tiền: ${formatVND(takeawayOrder.totalAmount)}đ\nTiền thừa: ${formatVND(change)}đ`);
+
+      window.location.reload();
+    } catch (err: any) { // Explicitly type err as 'any' or 'Error'
+      alert('❌ Lỗi thanh toán: ' + (err.response?.data?.message || err.message || err));
+    }
+  };
+
+  const handleCreateOrder = () => {
+    if (!takeawayTable) {
+      alert('Lỗi: Không tìm thấy bàn "Mang về" trong hệ thống. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+    console.log('🚀 Tạo đơn mang về cho bàn:', takeawayTable);
+    onOpenOrderView({ id: takeawayTable.id, name: 'Mang Về' });
   };
 
   return (
@@ -49,10 +74,12 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
           <div>
             <h3 className="text-3xl font-black uppercase tracking-tighter mb-2 italic">Khách Mang Về</h3>
             <p className="text-emerald-100 font-bold text-sm max-w-sm">Hệ thống ghi món và thanh toán nhanh chóng cho khách không ngồi tại quán.</p>
+            {!takeawayTable && <p className="text-yellow-300 text-xs mt-2 font-bold">⚠️ Chưa có bàn "Mang về" trong hệ thống</p>}
           </div>
-          <button 
-            onClick={() => onOpenOrderView({ id: 'MANG_VE', name: 'Mang Về' })}
-            className="bg-white text-[#10b981] px-10 py-5 rounded-[28px] font-black text-sm shadow-xl hover:scale-105 transition-transform active:scale-95 whitespace-nowrap"
+          <button
+            onClick={handleCreateOrder}
+            disabled={!takeawayTable}
+            className="bg-white text-[#10b981] px-10 py-5 rounded-[28px] font-black text-sm shadow-xl hover:scale-105 transition-transform active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <i className="fas fa-plus-circle mr-2"></i> {takeawayOrder ? 'THÊM MÓN VÀO ĐƠN' : 'TẠO ĐƠN MANG VỀ'}
           </button>
@@ -68,11 +95,11 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
               <p className="text-sm text-gray-400 font-bold mt-1">Mã hóa đơn: #{takeawayOrder.id.slice(-4)}</p>
             </div>
             <div className="flex items-center gap-10">
-               <div className="text-right">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tổng tiền</p>
-                  <p className="text-4xl font-black text-emerald-600 tracking-tighter">{formatVND(takeawayOrder.totalAmount)}đ</p>
-               </div>
-               <button 
+              <div className="text-right">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tổng tiền</p>
+                <p className="text-4xl font-black text-emerald-600 tracking-tighter">{formatVND(takeawayOrder.totalAmount)}đ</p>
+              </div>
+              <button
                 onClick={startCheckout}
                 className="bg-[#4B3621] text-white px-12 py-6 rounded-[32px] font-black text-lg shadow-2xl active:scale-95 transition-all"
               >
@@ -82,10 +109,10 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
           </div>
         ) : (
           <div className="bg-white rounded-[48px] p-20 text-center border-2 border-dashed border-gray-100">
-             <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 text-4xl mx-auto mb-6">
-               <i className="fas fa-shopping-bag"></i>
-             </div>
-             <h4 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-2">Chưa có đơn mang về nào</h4>
+            <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 text-4xl mx-auto mb-6">
+              <i className="fas fa-shopping-bag"></i>
+            </div>
+            <h4 className="text-xl font-black text-gray-400 uppercase tracking-tighter mb-2">Chưa có đơn mang về nào</h4>
           </div>
         )}
       </div>
@@ -94,7 +121,7 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setShowCheckoutModal(false)}></div>
           <div className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-5xl overflow-hidden animate-slide-up flex flex-col lg:flex-row max-h-[95vh]">
-            
+
             {/* PHẦN 1: BẢNG KÊ CHI TIẾT (GIỐNG TẠI QUÁN) */}
             <div className="flex-1 p-8 lg:p-12 bg-[#FDFCFB] border-r border-gray-100 overflow-y-auto">
               <div className="flex justify-between items-end mb-10 border-b border-gray-100 pb-8">
@@ -106,7 +133,7 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
                   <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-2xl font-black text-xs uppercase border border-emerald-100 italic">Khách Mang Về</div>
                 </div>
               </div>
-              
+
               <table className="w-full mb-10">
                 <thead>
                   <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b-2 border-gray-50">
@@ -139,8 +166,8 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
             {/* PHẦN 2: XỬ LÝ THANH TOÁN (GIỐNG TẠI QUÁN) */}
             <div className="w-full lg:w-[420px] p-8 lg:p-12 space-y-8 bg-white shrink-0">
               <div className="flex justify-between items-center mb-4">
-                 <h4 className="font-black text-[#4B3621] text-xs uppercase tracking-widest">Xử lý thanh toán</h4>
-                 <button onClick={() => setShowCheckoutModal(false)} className="text-gray-300 hover:text-gray-500 transition-colors"><i className="fas fa-times text-xl"></i></button>
+                <h4 className="font-black text-[#4B3621] text-xs uppercase tracking-widest">Xử lý thanh toán</h4>
+                <button onClick={() => setShowCheckoutModal(false)} className="text-gray-300 hover:text-gray-500 transition-colors"><i className="fas fa-times text-xl"></i></button>
               </div>
 
               {checkoutStep === 'method' && (
@@ -160,20 +187,20 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
                 <div className="space-y-8 animate-fade-in">
                   <div className="space-y-4">
                     <div className="flex justify-between items-center px-4">
-                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tiền khách đưa</label>
-                       <button onClick={() => setCheckoutStep('method')} className="text-[#C2A383] text-[10px] font-black uppercase underline">Thay đổi</button>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tiền khách đưa</label>
+                      <button onClick={() => setCheckoutStep('method')} className="text-[#C2A383] text-[10px] font-black uppercase underline">Thay đổi</button>
                     </div>
-                    <input 
-                      type="text" inputMode="numeric" autoFocus 
-                      value={receivedAmountStr} 
-                      onChange={(e) => setReceivedAmountStr(handleMoneyInput(e.target.value))} 
-                      className="w-full bg-gray-50 border-2 border-[#C2A383]/30 rounded-[32px] p-8 font-black text-5xl text-[#4B3621] text-center outline-none focus:border-[#C2A383] shadow-inner" 
+                    <input
+                      type="text" inputMode="numeric" autoFocus
+                      value={receivedAmountStr}
+                      onChange={(e) => setReceivedAmountStr(handleMoneyInput(e.target.value))}
+                      className="w-full bg-gray-50 border-2 border-[#C2A383]/30 rounded-[32px] p-8 font-black text-5xl text-[#4B3621] text-center outline-none focus:border-[#C2A383] shadow-inner"
                     />
                   </div>
                   <div className="bg-[#FAF9F6] p-8 rounded-[40px] space-y-4 border border-gray-100">
                     <div className="flex justify-between items-center text-xs">
-                       <span className="font-bold text-gray-400 uppercase tracking-widest">Cần thanh toán:</span>
-                       <span className="font-black text-gray-700">{formatVND(takeawayOrder.totalAmount)}đ</span>
+                      <span className="font-bold text-gray-400 uppercase tracking-widest">Cần thanh toán:</span>
+                      <span className="font-black text-gray-700">{formatVND(takeawayOrder.totalAmount)}đ</span>
                     </div>
                     <div className="h-px bg-gray-200 border-dashed border-b"></div>
                     <div className="flex justify-between items-center">
@@ -181,9 +208,9 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, onUpdateOrder, on
                       <span className="text-3xl font-black text-emerald-600">{formatVND(Math.max(0, receivedAmount - takeawayOrder.totalAmount))}đ</span>
                     </div>
                   </div>
-                  <button 
-                    disabled={receivedAmount < takeawayOrder.totalAmount} 
-                    onClick={() => finalizePayment(PaymentMethod.CASH)} 
+                  <button
+                    disabled={receivedAmount < takeawayOrder.totalAmount}
+                    onClick={() => finalizePayment(PaymentMethod.CASH)}
                     className="w-full bg-[#4B3621] text-white py-7 rounded-[32px] font-black text-sm uppercase shadow-2xl active:scale-95 transition-all disabled:opacity-30"
                   >
                     HOÀN TẤT & IN BILL

@@ -1,15 +1,16 @@
 
 export enum OrderStatus {
-  NEW = 'Mới',
-  PROCESSING = 'Đang làm',
-  COMPLETED = 'Hoàn thành',
-  PAID = 'Đã thanh toán',
-  CANCELLED = 'Đã hủy'
+  PENDING = 'PENDING',
+  PREPARING = 'PREPARING',
+  READY = 'READY',
+  SERVED = 'SERVED',
+  PAID = 'PAID',
+  CANCELLED = 'CANCELLED'
 }
 
 export enum PaymentMethod {
-  CASH = 'Tiền mặt',
-  BANK_TRANSFER = 'Chuyển khoản'
+  CASH = 'cash',
+  BANK_TRANSFER = 'bank_transfer'
 }
 
 export interface Category {
@@ -36,6 +37,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  orderNumber: number; // Readable ID
   tableId: string;
   status: OrderStatus;
   items: OrderItem[];
@@ -48,6 +50,7 @@ export interface Order {
 
 export interface Table {
   id: string;
+  tableNumber?: string;
   name: string;
   alias?: string;     // Tên gợi nhớ vị trí: Cửa sổ, Ngoài trời...
   guestName?: string; // Tên khách hiện tại
