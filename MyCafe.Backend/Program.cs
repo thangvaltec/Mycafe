@@ -20,7 +20,37 @@ builder.Services.AddCors(options =>
 
 // Configure PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    // Parse Render/Heroku style URL: postgres://user:password@host:port/database
+    if (connString != null && connString.StartsWith("postgres://"))
+    {
+        try 
+        {
+            var databaseUri = new Uri(connString);
+            var userInfo = databaseUri.UserInfo.Split(':');
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder
+            {
+                Host = databaseUri.Host,
+                Port = databaseUri.Port,
+                Username = userInfo[0],
+                Password = userInfo[1],
+                Database = databaseUri.LocalPath.TrimStart('/'),
+                SslMode = Npgsql.SslMode.Prefer, // Render often needs SSL
+                TrustServerCertificate = true 
+            };
+            connString = builder.ToString();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing connection URL: {ex.Message}");
+            // Fallback to original string if parsing fails
+        }
+    }
+
+    options.UseNpgsql(connString);
+});
 
     // Configure Swagger
     builder.Services.AddEndpointsApiExplorer();
