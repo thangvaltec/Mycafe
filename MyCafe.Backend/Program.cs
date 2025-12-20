@@ -37,10 +37,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 var databaseUri = new Uri(connString);
                 var userInfo = databaseUri.UserInfo.Split(':');
+                var port = databaseUri.Port > 0 ? databaseUri.Port : 5432;
                 var builder = new Npgsql.NpgsqlConnectionStringBuilder
                 {
                     Host = databaseUri.Host,
-                    Port = databaseUri.Port,
+                    Port = port,
                     Username = userInfo[0],
                     Password = userInfo[1],
                     Database = databaseUri.LocalPath.TrimStart('/'),
@@ -48,7 +49,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                     TrustServerCertificate = true 
                 };
                 connString = builder.ToString();
-                Console.WriteLine("[DB] Successfully parsed URI to ConnectionString.");
+                Console.WriteLine($"[DB] Successfully parsed URI. Host: {databaseUri.Host}, Port: {port}");
             }
             catch (Exception ex)
             {
