@@ -24,28 +24,36 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     var connString = builder.Configuration.GetConnectionString("DefaultConnection");
     
     // Parse Render/Heroku style URL: postgres://user:password@host:port/database
-    if (connString != null && connString.StartsWith("postgres://"))
+    // Parse Render/Heroku style URL: postgres://user:password@host:port/database
+    if (connString != null)
     {
-        try 
+        Console.WriteLine($"[DB] Connection String found: {connString.Substring(0, Math.Min(connString.Length, 15))}...");
+        
+        if (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || 
+            connString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
-            var databaseUri = new Uri(connString);
-            var userInfo = databaseUri.UserInfo.Split(':');
-            var builder = new Npgsql.NpgsqlConnectionStringBuilder
+            Console.WriteLine("[DB] Detected URI format. Parsing...");
+            try 
             {
-                Host = databaseUri.Host,
-                Port = databaseUri.Port,
-                Username = userInfo[0],
-                Password = userInfo[1],
-                Database = databaseUri.LocalPath.TrimStart('/'),
-                SslMode = Npgsql.SslMode.Prefer, // Render often needs SSL
-                TrustServerCertificate = true 
-            };
-            connString = builder.ToString();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error parsing connection URL: {ex.Message}");
-            // Fallback to original string if parsing fails
+                var databaseUri = new Uri(connString);
+                var userInfo = databaseUri.UserInfo.Split(':');
+                var builder = new Npgsql.NpgsqlConnectionStringBuilder
+                {
+                    Host = databaseUri.Host,
+                    Port = databaseUri.Port,
+                    Username = userInfo[0],
+                    Password = userInfo[1],
+                    Database = databaseUri.LocalPath.TrimStart('/'),
+                    SslMode = Npgsql.SslMode.Prefer,
+                    TrustServerCertificate = true 
+                };
+                connString = builder.ToString();
+                Console.WriteLine("[DB] Successfully parsed URI to ConnectionString.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing connection URL: {ex.Message}");
+            }
         }
     }
 
