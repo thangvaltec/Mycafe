@@ -103,8 +103,8 @@ const App: React.FC = () => {
         quantity: i.quantity
       })));
       await loadData();
-    } catch (err) {
-      alert("Failed to place order: " + err);
+    } catch (err: any) {
+      alert("Gửi đơn thất bại: " + (err.message || err));
     }
   };
 
@@ -156,6 +156,16 @@ const App: React.FC = () => {
   const handleAddExpense = async (e: Partial<Expense>) => {
     await api.addExpense(e);
     loadData();
+  };
+  const handleUpdateExpense = async (e: Expense) => {
+    await api.updateExpense(e);
+    loadData();
+  };
+  const handleDeleteExpense = async (id: string) => {
+    if (confirm('Xóa khoản chi này?')) {
+      await api.deleteExpense(id);
+      loadData();
+    }
   };
 
   // Categories
@@ -248,6 +258,8 @@ const App: React.FC = () => {
           onDeleteTable={handleDeleteTable}
           onUpdateOrder={handleUpdateOrder}
           onAddExpense={handleAddExpense}
+          onUpdateExpense={handleUpdateExpense}
+          onDeleteExpense={handleDeleteExpense}
           onPlaceOrder={handlePlaceOrder}
           onAddTable={handleAddTable}
           onSetOrders={(newOrders) => { }}

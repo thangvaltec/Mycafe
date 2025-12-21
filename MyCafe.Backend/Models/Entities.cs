@@ -33,10 +33,8 @@ public class Table
     [Column("id")]
     public int Id { get; set; }
 
-    [Required]
-    [MaxLength(10)]
     [Column("table_number")]
-    public string TableNumber { get; set; } = string.Empty;
+    public string? TableNumber { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(50)]
@@ -119,7 +117,7 @@ public class Order
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("order_number")]
-    public int OrderNumber { get; set; }
+    public int? OrderNumber { get; set; }
 
     [ForeignKey("TableId")]
     public Table? Table { get; set; }
@@ -223,4 +221,106 @@ public class Expense
 
     [Column("date")]
     public DateTime Date { get; set; } = DateTime.UtcNow;
+}
+
+[Table("billiard_sessions")]
+public class BilliardSession
+{
+    [Key]
+    [Column("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Column("table_id")]
+    public int TableId { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    [Column("guest_name")]
+    public string GuestName { get; set; } = string.Empty;
+
+    [Column("num_people")]
+    public int NumPeople { get; set; } = 2;
+
+    [Column("price_per_hour")]
+    public decimal PricePerHour { get; set; }
+
+    [Column("start_time")]
+    public DateTime StartTime { get; set; } = DateTime.UtcNow;
+
+    [Column("end_time")]
+    public DateTime? EndTime { get; set; }
+
+    [Column("total_amount")]
+    public decimal TotalAmount { get; set; } = 0;
+
+    [MaxLength(20)]
+    [Column("status")]
+    public string Status { get; set; } = "ACTIVE"; // ACTIVE, PAID
+}
+
+[Table("invoices")]
+public class Invoice
+{
+    [Key]
+    [Column("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Column("table_id")]
+    public int TableId { get; set; }
+
+    [Column("billiard_session_id")]
+    public Guid? BilliardSessionId { get; set; }
+
+    [Column("order_id")]
+    public Guid? OrderId { get; set; }
+
+    [Column("total_amount")]
+    public decimal TotalAmount { get; set; } = 0;
+
+    [MaxLength(50)]
+    [Column("payment_method")]
+    public string PaymentMethod { get; set; } = "cash";
+
+    [Required]
+    [MaxLength(200)]
+    [Column("identify_string")]
+    public string IdentifyString { get; set; } = string.Empty; // e.g. "Table BI-01 (10:00 - 12:00)"
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public List<InvoiceItem> Items { get; set; } = new();
+}
+
+[Table("invoice_items")]
+public class InvoiceItem
+{
+    [Key]
+    [Column("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Column("invoice_id")]
+    public Guid InvoiceId { get; set; }
+
+    [JsonIgnore]
+    [ForeignKey("InvoiceId")]
+    public Invoice? Invoice { get; set; }
+
+    [Required]
+    [MaxLength(200)]
+    [Column("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [Column("quantity")]
+    public int Quantity { get; set; } = 1;
+
+    [Column("unit_price")]
+    public decimal UnitPrice { get; set; }
+
+    [Column("total_price")]
+    public decimal TotalPrice { get; set; }
+
+    [MaxLength(50)]
+    [Column("type")]
+    public string Type { get; set; } = "ITEM"; // ITEM, TIME_FEE, SERVICE
 }

@@ -7,7 +7,9 @@ import AdminMenu from './Admin/AdminMenu';
 import AdminExpenses from './Admin/AdminExpenses';
 import AdminReport from './Admin/AdminReport';
 import AdminTakeaway from './Admin/AdminTakeaway';
+import AdminBilliard from './Admin/AdminBilliard';
 import CustomerView from './CustomerView';
+import { api } from '../services/api';
 
 interface AdminViewProps {
   tables: Table[];
@@ -22,6 +24,8 @@ interface AdminViewProps {
   onDeleteTable: (id: number) => void;
   onUpdateOrder: (o: Order) => void;
   onAddExpense: (e: Partial<Expense>) => void;
+  onUpdateExpense: (e: Expense) => void;
+  onDeleteExpense: (id: string) => void;
   onPlaceOrder: (tableId: string, items: OrderItem[]) => void;
   onAddTable: () => void;
   onSetOrders: (orders: Order[]) => void;
@@ -36,11 +40,11 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({
   tables, products, categories, orders, expenses,
-  onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateTable, onDeleteTable, onUpdateOrder, onAddExpense, onPlaceOrder, onAddTable,
+  onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateTable, onDeleteTable, onUpdateOrder, onAddExpense, onUpdateExpense, onDeleteExpense, onPlaceOrder, onAddTable,
   onSetOrders, onSetExpenses, onSetTables, onAddCategory, onUpdateCategory, onDeleteCategory,
   onLogout, onSwitchMode
 }) => {
-  const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'orders' | 'menu' | 'expenses' | 'report'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'expenses' | 'orders' | 'menu' | 'report' | 'billiard'>('pos');
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
   const [currentOrderingTable, setCurrentOrderingTable] = useState<Table | { id: string, name: string, guestName?: string } | null>(null);
 
@@ -55,6 +59,24 @@ const AdminView: React.FC<AdminViewProps> = ({
     if (currentOrderingTable) {
       onPlaceOrder(currentOrderingTable.id, items);
       setIsStaffOrdering(false);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string, orderId?: string) => {
+    let activeOrder = null;
+    if (orderId) {
+      activeOrder = orders.find(o => o.id === orderId);
+    } else if (currentOrderingTable) {
+      activeOrder = orders.find(o => o.tableId === currentOrderingTable.id && o.status !== OrderStatus.PAID);
+    }
+
+    if (!activeOrder) return;
+
+    try {
+      const updatedOrder = (await api.deleteOrderItem(activeOrder.id, itemId)) as Order;
+      onSetOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+    } catch (err: any) {
+      alert('Không thể xóa món: ' + (err.message || err));
     }
   };
 
@@ -78,6 +100,8 @@ const AdminView: React.FC<AdminViewProps> = ({
           activeOrder={orders.find(o => o.tableId === currentOrderingTable.id && o.status !== OrderStatus.PAID)}
           onPlaceOrder={handleStaffPlaceOrder}
           compact
+          isAdmin={true}
+          onRemoveItem={handleRemoveItem}
         />
       </div>
     );
@@ -98,6 +122,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           {[
             { id: 'pos', icon: 'fa-table-cells', label: 'Phục vụ' },
             { id: 'takeaway', icon: 'fa-bag-shopping', label: 'Mang về' },
+            { id: 'billiard', icon: 'fa-circle-dot', label: 'Bida' },
             { id: 'orders', icon: 'fa-receipt', label: 'Đơn hàng' },
             { id: 'menu', icon: 'fa-mug-hot', label: 'Thực đơn' },
             { id: 'expenses', icon: 'fa-wallet', label: 'Chi phí' },
@@ -132,6 +157,7 @@ const AdminView: React.FC<AdminViewProps> = ({
               {activeTab === 'takeaway' && 'Đơn mang về'}
               {activeTab === 'orders' && 'Lịch sử hóa đơn'}
               {activeTab === 'menu' && 'Thực đơn'}
+              {activeTab === 'billiard' && 'Quản lý Bida'}
               {activeTab === 'expenses' && 'Chi phí'}
               {activeTab === 'report' && 'Doanh thu'}
             </h2>
@@ -166,7 +192,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-10 admin-scroll bg-[#F8F7F3]">
+        <div className={`flex-1 bg-[#F8F7F3] ${activeTab === 'report' ? 'overflow-hidden p-2 lg:p-4 flex flex-col' : 'overflow-y-auto p-4 lg:p-10 admin-scroll'}`}>
           {activeTab === 'pos' && (
             <AdminPOS
               tables={tables}
@@ -186,7 +212,23 @@ const AdminView: React.FC<AdminViewProps> = ({
               onOpenOrderView={handleOpenOrderView}
             />
           )}
-          {activeTab === 'orders' && <AdminOrders orders={orders} tables={tables} onUpdateOrder={onUpdateOrder} onUpdateTable={onUpdateTable} onOpenOrderView={(id) => handleOpenOrderView(tables.find(t => t.id === id)!)} />}
+          {activeTab === 'billiard' && (
+            <AdminBilliard
+              tables={tables}
+              onOpenOrderView={handleOpenOrderView}
+              onSetTables={onSetTables}
+            />
+          )}
+          {activeTab === 'orders' && (
+            <AdminOrders
+              orders={orders}
+              tables={tables}
+              onUpdateOrder={onUpdateOrder}
+              onUpdateTable={onUpdateTable}
+              onOpenOrderView={(id) => handleOpenOrderView(tables.find(t => t.id === id)!)}
+              onDeleteOrderItem={handleRemoveItem}
+            />
+          )}
           {activeTab === 'menu' && (
             <AdminMenu
               products={products}
@@ -199,7 +241,14 @@ const AdminView: React.FC<AdminViewProps> = ({
               onDeleteCategory={onDeleteCategory}
             />
           )}
-          {activeTab === 'expenses' && <AdminExpenses expenses={expenses} onAddExpense={onAddExpense} />}
+          {activeTab === 'expenses' && (
+            <AdminExpenses
+              expenses={expenses}
+              onAddExpense={onAddExpense}
+              onUpdateExpense={onUpdateExpense}
+              onDeleteExpense={onDeleteExpense}
+            />
+          )}
           {activeTab === 'report' && (
             <AdminReport
               orders={orders}

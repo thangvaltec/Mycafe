@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyCafe.Backend.Data;
 using MyCafe.Backend.Models;
+using System.Linq;
 
 namespace MyCafe.Backend.Controllers;
 
@@ -143,6 +144,25 @@ public class OrderController : ControllerBase
             CreatedAt = DateTime.UtcNow,
             Items = new List<OrderItem>()
         };
+    }
+    [HttpDelete("{orderId}/items/{itemId}")]
+    public async Task<IActionResult> DeleteOrderItem(Guid orderId, Guid itemId)
+    {
+        var order = await _context.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId);
+        if (order == null) return NotFound("Order not found");
+
+        var item = order.Items.FirstOrDefault(i => i.Id == itemId);
+        if (item == null) return NotFound("Item not found in order");
+
+        order.Items.Remove(item);
+        _context.OrderItems.Remove(item);
+
+        // Recalculate total
+        order.TotalAmount = order.Items.Sum(i => i.Price * i.Quantity);
+        
+        await _context.SaveChangesAsync();
+
+        return Ok(order);
     }
 }
 

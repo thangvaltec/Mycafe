@@ -1,15 +1,35 @@
-import { Category, Expense, Product, Order, PaymentMethod, Table } from '../types';
+import { Category, Expense, Product, Order, PaymentMethod, Table, BilliardSession } from '../types';
 
 const API_URL = (import.meta.env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
 
 // --- Helper ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
-    const res = await fetch(`${API_URL}${endpoint}`, options);
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || res.statusText);
+    try {
+        const res = await fetch(`${API_URL}${endpoint}`, options);
+        if (!res.ok) {
+            const text = await res.text();
+            // Translate common HTTP errors if backend returns raw status
+            if (res.status === 404) throw new Error('Không tìm thấy dữ liệu (404)');
+            if (res.status === 401) throw new Error('Phiên đăng nhập hết hạn (401)');
+            if (res.status === 500) throw new Error('Lỗi máy chủ (500)');
+            if (res.status === 400) throw new Error(text || 'Yêu cầu không hợp lệ (400)');
+
+            throw new Error(text || `Lỗi không xác định (${res.status})`);
+        }
+        return res.json();
+    } catch (err: any) {
+        // Translate Network Errors
+        const msg = err.message || err.toString();
+        if (
+            msg.includes('Failed to fetch') ||
+            msg.includes('NetworkError') ||
+            msg.includes('TypeError: Failed') ||
+            err.name === 'TypeError'
+        ) {
+            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc thử lại.');
+        }
+        throw err;
     }
-    return res.json();
 };
 
 export const api = {
@@ -21,6 +41,11 @@ export const api = {
 
     // Tables
     getTables: () => fetchApi<Table[]>('/table'),
+    addTable: (table: Partial<Table>) => fetchApi<Table>('/table', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(table)
+    }),
     createTable: (table: Partial<Table>) => fetchApi<Table>('/table', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,9 +145,40 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(expense)
     }),
+    deleteOrderItem: (orderId: string, itemId: string) => fetchApi(`/order/${orderId}/items/${itemId}`, {
+        method: 'DELETE',
+    }),
+    updateExpense: (expense: Expense) => fetchApi<Expense>(`/report/expenses/${expense.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense)
+    }),
+    deleteExpense: (id: string) => fetchApi(`/report/expenses/${id}`, { method: 'DELETE' }),
     exportCsv: () => {
         window.location.href = `${API_URL}/report/export`;
-    }
+    },
+
+    // Billiard Management
+    getBilliardSessions: () => fetchApi<BilliardSession[]>('/billiard'),
+    startBilliardSession: (session: { tableId: number, guestName: string, numPeople: number, pricePerHour: number, startTime?: string }) => fetchApi<BilliardSession>('/billiard/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(session)
+    }),
+    stopBilliardSession: (id: string) => fetchApi<BilliardSession>(`/billiard/${id}/stop`, { method: 'PUT' }),
+    payBilliardSession: (id: string, totalAmount: number, endTime?: string) => fetchApi<BilliardSession>(`/billiard/${id}/pay`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalAmount, endTime })
+    }),
+
+    // Unified Billing
+    getBill: (tableId: number) => fetchApi<any>(`/billiard/${tableId}/bill`),
+    billiardCheckout: (tableId: number, paymentMethod: string, paymentAmount?: number) => fetchApi(`/billiard/${tableId}/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethod, paymentAmount })
+    }),
 };
 
 const mapToProduct = (item: any): Product => ({

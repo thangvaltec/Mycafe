@@ -26,8 +26,13 @@ public class TableController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateTable(Table table)
     {
+        if (string.IsNullOrEmpty(table.TableNumber))
+        {
+            table.TableNumber = table.Name;
+        }
+
         if (await _context.Tables.AnyAsync(t => t.TableNumber == table.TableNumber))
-            return BadRequest("Số bàn này đã tồn tại");
+            return BadRequest("Số bàn (Table Number) này đã tồn tại");
 
         _context.Tables.Add(table);
         await _context.SaveChangesAsync();

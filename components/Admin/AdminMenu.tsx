@@ -157,19 +157,34 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
               </h3>
               <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent"></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
               {products.filter(p => p.categoryId === cat.id).map(p => (
-                <div key={p.id} className="bg-white p-6 rounded-[48px] shadow-sm border border-gray-50 flex gap-6 items-center hover:shadow-xl transition-all">
-                  <div className="w-32 h-32 rounded-[36px] overflow-hidden shadow-md shrink-0 border-4 border-gray-50 relative">
-                    <img src={p.imageUrl} className="w-full h-full object-cover" alt="" />
-                    {!p.isActive && <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center"><span className="bg-gray-800 text-white text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">TẠM NGƯNG</span></div>}
+                <div key={p.id} className="bg-white p-4 rounded-[32px] shadow-sm border border-gray-100 flex flex-col group hover:shadow-xl transition-all hover:-translate-y-1">
+                  <div className="w-full aspect-square rounded-[24px] overflow-hidden shadow-inner border border-gray-50 relative mb-4">
+                    <img src={p.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                    {!p.isActive && (
+                      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center">
+                        <span className="bg-red-500 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest shadow-lg transform -rotate-6 border border-white/20">Tạm ngưng</span>
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-white/90 backdrop-blur text-[#4B3621] text-[10px] font-black px-2 py-1 rounded-lg shadow-sm border border-[#4B3621]/10">
+                        {formatVND(p.price)}đ
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-[#4B3621] text-lg leading-tight truncate">{p.name}</h4>
-                    <p className="text-xl font-black text-[#C2A383] mt-1 tracking-tighter">{formatVND(p.price)}đ</p>
-                    <div className="flex gap-2 mt-5">
-                      <button onClick={() => handleOpenProductModal(p)} className="flex-1 py-3 bg-[#FAF9F6] text-[9px] font-black uppercase rounded-2xl hover:bg-[#C2A383] hover:text-white transition-all text-gray-400">SỬA</button>
-                      <button onClick={() => confirm('Xóa món này?') && onDeleteProduct(p.id)} className="px-4 py-3 bg-red-50 text-red-300 text-[9px] font-black uppercase rounded-2xl hover:bg-red-500 hover:text-white transition-all"><i className="fas fa-trash"></i></button>
+
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <h4 className="font-bold text-[#4B3621] text-sm leading-tight line-clamp-2 min-h-[2.5em] mb-1" title={p.name}>{p.name}</h4>
+                    <p className="text-lg font-black text-[#C2A383] tracking-tighter mb-4">{formatVND(p.price)}đ</p>
+
+                    <div className="flex gap-2 mt-auto">
+                      <button onClick={() => handleOpenProductModal(p)} className="flex-1 py-2.5 bg-gray-50 text-gray-400 rounded-xl font-black text-[9px] uppercase hover:bg-[#C2A383] hover:text-white transition-all flex items-center justify-center gap-1.5 group/btn">
+                        <i className="fas fa-pen"></i> SỬA
+                      </button>
+                      <button onClick={() => confirm('Xóa món này?') && onDeleteProduct(p.id)} className="flex-1 py-2.5 bg-red-50 text-red-400 rounded-xl font-black text-[9px] uppercase hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5 group/btn">
+                        <i className="fas fa-trash"></i> XÓA
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -283,8 +298,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
                     </div>
                   ) : <span className="font-black text-[#4B3621] uppercase text-xs">{c.name}</span>}
                   <div className="flex gap-2">
-                    <button onClick={() => setEditingCategory(c)} className="w-10 h-10 rounded-xl bg-white text-gray-400 shadow-sm flex items-center justify-center hover:text-[#C2A383] transition-colors"><i className="fas fa-pen text-[10px]"></i></button>
-                    <button onClick={() => onDeleteCategory(c.id)} className="w-10 h-10 rounded-xl bg-white text-gray-400 hover:text-red-500 shadow-sm flex items-center justify-center transition-colors"><i className="fas fa-trash text-[10px]"></i></button>
+                    <button onClick={() => setEditingCategory(c)} className="px-3 py-2 rounded-xl bg-white text-gray-400 shadow-sm border border-gray-100 flex items-center gap-1 hover:text-[#C2A383] hover:border-[#C2A383] transition-colors font-black text-[9px] uppercase"><i className="fas fa-pen"></i> Sửa</button>
+                    <button onClick={() => onDeleteCategory(c.id)} className="px-3 py-2 rounded-xl bg-white text-gray-400 shadow-sm border border-gray-100 flex items-center gap-1 hover:text-red-500 hover:border-red-200 transition-colors font-black text-[9px] uppercase"><i className="fas fa-trash"></i> Xóa</button>
                   </div>
                 </div>
               ))}

@@ -1,0 +1,3 @@
+@echo off
+echo Dang yeu cau quyen Admin de mo cong firewall...
+powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -ExectutionPolicy Bypass -Command New-NetFirewallRule -DisplayName ''Allow MyCafe Ports'' -Direction Inbound -LocalPort 3000,5238 -Protocol TCP -Action Allow; Write-Host ''✅ Đã mở cổng thành công! Hãy thử lại điện thoại.''; Read-Host ''An Enter de thoat...'''"

@@ -66,6 +66,33 @@ public class ReportController : ControllerBase
         return Ok(expense);
     }
 
+    [HttpPut("expenses/{id}")]
+    public async Task<IActionResult> UpdateExpense(Guid id, Expense expense)
+    {
+        if (id != expense.Id) return BadRequest();
+
+        var existing = await _context.Expenses.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        existing.Description = expense.Description;
+        existing.Amount = expense.Amount;
+        existing.Date = DateTime.SpecifyKind(expense.Date, DateTimeKind.Utc);
+
+        await _context.SaveChangesAsync();
+        return Ok(existing);
+    }
+
+    [HttpDelete("expenses/{id}")]
+    public async Task<IActionResult> DeleteExpense(Guid id)
+    {
+        var expense = await _context.Expenses.FindAsync(id);
+        if (expense == null) return NotFound();
+
+        _context.Expenses.Remove(expense);
+        await _context.SaveChangesAsync();
+        return Ok();
+    }
+
     [HttpGet("export")]
     public async Task<IActionResult> ExportCsv()
     {

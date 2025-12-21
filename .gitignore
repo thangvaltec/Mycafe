@@ -1,4 +1,4 @@
-# Logs
+# --- logs & runtime ---
 logs
 *.log
 npm-debug.log*
@@ -6,28 +6,43 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+test_output.txt
+test_results.txt
+test_results_utf8.txt
+test_final.txt
+test_output.md
 
+# --- dependencies & build ---
 node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.production
+.env.development
 
-# Editor directories and files
+# --- IDE & OS ---
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
+Desktop.ini
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
-*.sw?
-.obj
+*.sln.docstates
+.vs/
+_ReSharper*/
+*.rsuser
 
 # --- .NET CORE / ASP.NET ---
-bin/
-obj/
-publish/
+# Ignore bin and obj in ANY directory
+**/bin/
+**/obj/
+**/publish/
+
+# specific build folders
 [Dd]ebug/
 [Rr]elease/
 x64/
@@ -35,20 +50,12 @@ x86/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
 
-# Config & User specific
+# User config
 appsettings.Development.json
-*.user
-*.userosscache
-*.sln.docstates
-.vs/
-_ReSharper*/
-*.rsuser
+appsettings.Local.json
 
-# MyCafe Specific
-MyCafe.Backend/bin/
-MyCafe.Backend/obj/
-*.ps1
+# --- Database ---
+*.db
+*.db-shm
+*.db-wal

@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
 import { Order, OrderStatus, Table, PaymentMethod } from '../../types';
-import { BANK_QR_IMAGE_URL } from '../../constants';
-import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
-import { api } from '../../services/api';
+import CheckoutModal from './CheckoutModal';
+import { formatVND } from '../../utils/format';
 
 interface AdminOrdersProps {
   orders: Order[];
@@ -11,14 +10,13 @@ interface AdminOrdersProps {
   onUpdateOrder: (o: Order) => void;
   onUpdateTable: (t: Table) => void;
   onOpenOrderView: (tableId: string) => void;
+  onDeleteOrderItem: (itemId: string, orderId: string) => void;
 }
 
-const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder, onUpdateTable, onOpenOrderView }) => {
+const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder, onUpdateTable, onOpenOrderView, onDeleteOrderItem }) => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState<Order | null>(null);
-  const [checkoutStep, setCheckoutStep] = useState<'method' | 'cash' | 'transfer'>('method');
-  const [receivedAmountStr, setReceivedAmountStr] = useState<string>('');
 
   // Helpers for display labels
   const getStatusLabel = (status: OrderStatus) => {
@@ -42,38 +40,9 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
   const activeOrders = orders.filter(o => o.status !== OrderStatus.PAID).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const paidOrders = orders.filter(o => o.status === OrderStatus.PAID).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const receivedAmount = parseVND(receivedAmountStr);
-
   const startCheckout = (order: Order) => {
     setSelectedOrder(order);
-    setReceivedAmountStr('');
-    setCheckoutStep('method');
     setShowCheckoutModal(true);
-  };
-
-  const finalizePayment = async (method: PaymentMethod) => {
-    if (!selectedOrder) return;
-    const table = tables.find(t => t.id === selectedOrder.tableId);
-    const finalReceived = method === PaymentMethod.CASH ? receivedAmount : selectedOrder.totalAmount;
-    const change = Math.max(0, finalReceived - selectedOrder.totalAmount);
-
-    try {
-      // Call real API to save payment - use orderId for Orders screen
-      await api.checkout(
-        selectedOrder.id,
-        method,
-        finalReceived,
-        true // isOrderId = true
-      );
-
-      // Success notification
-      alert(`✅ Thanh toán thành công!\n\nTổng tiền: ${formatVND(selectedOrder.totalAmount)}đ\nTiền thừa: ${formatVND(change)}đ`);
-
-      // Force reload to sync all screens
-      window.location.reload();
-    } catch (err) {
-      alert('❌ Lỗi thanh toán: ' + err);
-    }
   };
 
   return (
@@ -100,7 +69,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   <div className="flex justify-between items-start mb-6 relative">
                     <div>
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{isTakeaway ? 'MANG VỀ' : (table?.name || 'Bàn ' + order.tableId)}</p>
-                      <h4 className="text-2xl font-black text-[#4B3621] leading-none">{table?.guestName || 'Khách vãng lai'}</h4>
+                      <h4 className="text-2xl font-black text-[#4B3621] leading-none">{table?.guestName === 'Khách vãng lai' ? '' : (table?.guestName || '')}</h4>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{formatVND(order.totalAmount)}đ</span>
@@ -108,11 +77,28 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                     </div>
                   </div>
 
-                  <div className="flex-1 space-y-2 mb-8 max-h-32 overflow-y-auto no-scrollbar border-t border-gray-50 pt-4">
+                  <div className="flex-1 space-y-2 mb-6 max-h-[240px] overflow-y-auto custom-scrollbar border-t border-dashed border-gray-100 pt-4">
+                    <div className="flex justify-between items-center px-1 mb-2">
+                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Danh sách món ({order.items.length})</p>
+                      <i className="fas fa-list-ul text-gray-200 text-xs"></i>
+                    </div>
                     {order.items.map((item, i) => (
-                      <div key={i} className="flex justify-between text-[11px] font-bold text-gray-500 italic">
-                        <span className="truncate mr-4">• {item.productName}</span>
-                        <span className="shrink-0">x{item.quantity}</span>
+                      <div key={i} className="flex justify-between items-center p-2.5 rounded-2xl hover:bg-orange-50/50 transition-colors group/item border border-transparent hover:border-orange-100">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-white text-[#4B3621] font-black text-xs flex items-center justify-center border border-gray-100 shadow-sm shrink-0 group-hover/item:border-orange-200 group-hover/item:text-orange-700">
+                            x{item.quantity}
+                          </div>
+                          <span className="text-xs font-bold text-gray-700 truncate group-hover/item:text-[#4B3621] leading-tight">{item.productName}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Xóa món "${item.productName}"?`)) onDeleteOrderItem(String(item.id), order.id);
+                          }}
+                          className="ml-2 px-3 py-2 bg-white text-red-500 rounded-xl font-black text-[9px] uppercase tracking-wider border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all shadow-sm whitespace-nowrap flex items-center gap-1.5 opacity-60 hover:opacity-100 group-hover/item:opacity-100"
+                        >
+                          <i className="fas fa-trash-alt"></i> XÓA
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -139,11 +125,11 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#FAF9F6] border-b border-gray-50">
-                  <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">STT</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Thời gian</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Bàn / Khách</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Thanh toán</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Tổng tiền</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap w-16">STT</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Thời gian</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Bàn / Khách</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap text-center">Thanh toán</th>
+                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right whitespace-nowrap">Tổng tiền</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -152,20 +138,20 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   const isTakeaway = table?.alias === 'Takeaway' || table?.tableNumber === 'MV';
                   return (
                     <tr key={order.id} onClick={() => setViewingHistoryOrder(order)} className="hover:bg-[#C2A383]/5 transition-colors cursor-pointer group">
-                      <td className="px-8 py-5 font-black text-[#C2A383] text-[10px] group-hover:underline">#{order.orderNumber}</td>
-                      <td className="px-8 py-5 text-xs font-bold text-gray-400">{new Date(order.createdAt).toLocaleTimeString('vi-VN')}</td>
-                      <td className="px-8 py-5">
+                      <td className="px-4 py-4 font-black text-[#C2A383] text-[10px] group-hover:underline">#{order.orderNumber}</td>
+                      <td className="px-4 py-4 text-xs font-bold text-gray-400 whitespace-nowrap">{new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="px-4 py-4">
                         <div className="flex flex-col">
                           <span className="font-black text-gray-800 text-xs">{isTakeaway ? 'MANG VỀ' : (table?.name || 'Bàn ' + order.tableId)}</span>
-                          <span className="text-[10px] text-gray-400 font-bold">{isTakeaway ? 'Khách lẻ' : (table?.guestName || 'Khách vãng lai')}</span>
+                          <span className="text-[10px] text-gray-400 font-bold">{isTakeaway ? 'Khách lẻ' : (table?.guestName === 'Khách vãng lai' ? '' : (table?.guestName || ''))}</span>
                         </div>
                       </td>
-                      <td className="px-8 py-5">
-                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${order.paymentMethod === PaymentMethod.CASH ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                      <td className="px-4 py-4 text-center">
+                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md whitespace-nowrap ${order.paymentMethod === PaymentMethod.CASH ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                           {getMethodLabel(order.paymentMethod)}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-right font-black text-[#4B3621]">{formatVND(order.totalAmount)}đ</td>
+                      <td className="px-4 py-4 text-right font-black text-[#4B3621] whitespace-nowrap">{formatVND(order.totalAmount)}đ</td>
                     </tr>
                   );
                 })}
@@ -178,115 +164,16 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
 
       {/* MODAL THANH TOÁN (ĐỒNG BỘ GIAO DIỆN) */}
       {showCheckoutModal && selectedOrder && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setShowCheckoutModal(false)}></div>
-          <div className="relative bg-white rounded-[40px] shadow-2xl w-full max-w-5xl overflow-hidden animate-slide-up flex flex-col lg:flex-row max-h-[95vh]">
-
-            <div className="flex-1 p-8 lg:p-12 bg-[#FDFCFB] border-r border-gray-100 overflow-y-auto">
-              <div className="flex justify-between items-end mb-10 border-b border-gray-100 pb-8">
-                <div>
-                  <h3 className="text-3xl font-black text-[#4B3621] uppercase tracking-tighter">Bảng kê thanh toán</h3>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">MÃ HÓA ĐƠN #{selectedOrder.id.slice(-4)} – BÀN {selectedOrder.tableId}</p>
-                </div>
-              </div>
-
-              <table className="w-full mb-10">
-                <thead>
-                  <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b-2 border-gray-50">
-                    <th className="text-left py-5 px-2">Tên món</th>
-                    <th className="text-center py-5 px-4">SL</th>
-                    <th className="text-right py-5 px-4">Đơn giá</th>
-                    <th className="text-right py-5 px-2">Thành tiền</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {selectedOrder.items.map((item, idx) => (
-                    <tr key={idx} className="text-sm group hover:bg-gray-50/50 transition-colors">
-                      <td className="py-5 px-2 font-black text-[#4B3621]">{item.productName}</td>
-                      <td className="py-5 px-4 text-center font-black text-[#C2A383]">x{item.quantity}</td>
-                      <td className="py-5 px-4 text-right text-gray-400 font-bold">{formatVND(item.price)}đ</td>
-                      <td className="py-5 px-2 text-right font-black text-[#4B3621]">{formatVND(item.price * item.quantity)}đ</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="mt-auto pt-10 border-t-4 border-[#4B3621]">
-                <div className="flex justify-between items-center bg-[#4B3621] p-8 rounded-[32px] text-white shadow-xl">
-                  <span className="font-black text-white/50 uppercase text-sm tracking-[0.2em]">Tổng cộng cần thu:</span>
-                  <span className="text-5xl lg:text-6xl font-black tracking-tighter">{formatVND(selectedOrder.totalAmount)}đ</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="w-full lg:w-[420px] p-8 lg:p-12 space-y-8 bg-white shrink-0">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-black text-[#4B3621] text-xs uppercase tracking-widest">Xử lý tiền</h4>
-                <button onClick={() => setShowCheckoutModal(false)} className="text-gray-300 hover:text-gray-500 transition-colors"><i className="fas fa-times text-xl"></i></button>
-              </div>
-
-              {checkoutStep === 'method' && (
-                <div className="grid grid-cols-1 gap-4">
-                  <button onClick={() => setCheckoutStep('cash')} className="w-full flex items-center gap-6 p-7 rounded-[32px] bg-emerald-50 text-emerald-700 border-2 border-emerald-100 hover:bg-emerald-100 transition-all group shadow-sm">
-                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md"><i className="fas fa-money-bill-wave text-2xl"></i></div>
-                    <span className="font-black text-sm uppercase tracking-widest">Tiền mặt</span>
-                  </button>
-                  <button onClick={() => setCheckoutStep('transfer')} className="w-full flex items-center gap-6 p-7 rounded-[32px] bg-blue-50 text-blue-700 border-2 border-blue-100 hover:bg-blue-100 transition-all group shadow-sm">
-                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md"><i className="fas fa-qrcode text-2xl"></i></div>
-                    <span className="font-black text-sm uppercase tracking-widest">Chuyển khoản</span>
-                  </button>
-                </div>
-              )}
-
-              {checkoutStep === 'cash' && (
-                <div className="space-y-8 animate-fade-in">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Tiền mặt khách đưa</label>
-                    <input
-                      type="text" inputMode="numeric" autoFocus
-                      value={receivedAmountStr}
-                      onChange={(e) => setReceivedAmountStr(handleMoneyInput(e.target.value))}
-                      className="w-full bg-gray-50 border-2 border-[#C2A383]/30 rounded-[32px] p-8 font-black text-5xl text-[#4B3621] text-center outline-none focus:border-[#C2A383] shadow-inner"
-                    />
-                  </div>
-                  <div className="bg-[#FAF9F6] p-8 rounded-[40px] space-y-4 border border-gray-100">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-gray-400 uppercase tracking-widest">Hóa đơn:</span>
-                      <span className="font-black text-gray-700">{formatVND(selectedOrder.totalAmount)}đ</span>
-                    </div>
-                    <div className="h-px bg-gray-200 border-dashed border-b"></div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tiền thừa:</span>
-                      <span className="text-3xl font-black text-emerald-600">{formatVND(Math.max(0, receivedAmount - selectedOrder.totalAmount))}đ</span>
-                    </div>
-                  </div>
-                  <button
-                    disabled={receivedAmount < selectedOrder.totalAmount}
-                    onClick={() => finalizePayment(PaymentMethod.CASH)}
-                    className="w-full bg-[#4B3621] text-white py-7 rounded-[32px] font-black text-sm uppercase shadow-2xl active:scale-95 transition-all"
-                  >
-                    HOÀN TẤT
-                  </button>
-                </div>
-              )}
-
-              {checkoutStep === 'transfer' && (
-                <div className="space-y-8 text-center animate-fade-in">
-                  <div className="bg-white p-6 border-2 border-dashed border-blue-100 rounded-[48px] flex flex-col items-center gap-8 shadow-sm">
-                    <div className="w-52 h-52 bg-white rounded-3xl overflow-hidden border-4 border-gray-50 p-2 shadow-inner">
-                      <img src={`${BANK_QR_IMAGE_URL}&amount=${selectedOrder.totalAmount}`} className="w-full h-full object-contain" alt="QR" />
-                    </div>
-                    <h4 className="text-4xl font-black text-blue-700 tracking-tighter">{formatVND(selectedOrder.totalAmount)}đ</h4>
-                  </div>
-                  <div className="flex gap-4">
-                    <button onClick={() => setCheckoutStep('method')} className="flex-1 bg-gray-100 text-gray-500 py-6 rounded-3xl font-black text-[10px] uppercase">LẠI</button>
-                    <button onClick={() => finalizePayment(PaymentMethod.BANK_TRANSFER)} className="flex-[2] bg-[#4B3621] text-white py-6 rounded-3xl font-black text-[10px] uppercase shadow-xl">XÁC NHẬN</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <CheckoutModal
+          order={selectedOrder}
+          table={tables.find(t => t.id === selectedOrder.tableId)}
+          useOrderId={true}
+          onClose={() => setShowCheckoutModal(false)}
+          onSuccess={() => {
+            setShowCheckoutModal(false);
+            window.location.reload();
+          }}
+        />
       )}
 
       {/* MODAL XEM CHI TIẾT LỊCH SỬ (Receipt View) */}

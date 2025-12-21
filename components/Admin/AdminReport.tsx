@@ -13,7 +13,12 @@ interface AdminReportProps {
 }
 
 const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  // Fix Date Timezone bug: Use local date construction
+  const getLocalDateStr = (d: Date = new Date()) => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getLocalDateStr());
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [showCalendar, setShowCalendar] = useState(false);
   const [viewDate, setViewDate] = useState(new Date(selectedDate));
@@ -27,8 +32,9 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
   const handlePrevMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
   const handleNextMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
   const handleSelectDay = (day: number) => {
-    const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-    setSelectedDate(newDate.toISOString().split('T')[0]);
+    // Fixed: Construct YYYY-MM-DD directly to avoid UTC shift
+    const newDateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setSelectedDate(newDateStr);
     setShowCalendar(false);
   };
 
@@ -78,32 +84,63 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
   }, [orders, expenses, selectedDate, period]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-20">
-      {/* BỘ LỌC THỜI GIAN - TỰ XÂY DỰNG ĐỂ KHÔNG BỊ TIẾNG NHẬT */}
-      <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-8">
-        <div className="flex flex-col sm:flex-row items-center gap-6 w-full lg:w-auto">
-          <div className="flex flex-col gap-1 w-full sm:w-auto relative">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Mốc thời gian gốc</label>
-            <div className="flex gap-2 relative">
+    <div className="h-full flex flex-col gap-4 animate-fade-in p-2 md:p-0">
+
+      {/* TOP SECTION: FILTERS & SUMMARY STATS */}
+      <div className="shrink-0 flex flex-col xl:flex-row gap-4">
+
+        {/* LEFT: Date & View Controls */}
+        <div className="xl:w-1/3 bg-white p-5 rounded-[32px] shadow-sm border border-gray-100 flex flex-col justify-between gap-4">
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Thời gian hiển thị</label>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:bg-[#C2A383] hover:text-white flex items-center justify-center transition-all"
+              title="Làm mới dữ liệu"
+            >
+              <i className="fas fa-sync-alt text-xs"></i>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {/* Period Selector */}
+            <div className="bg-gray-50 p-1 rounded-2xl flex relative">
+              {[
+                { id: 'day', label: 'Ngày' },
+                { id: 'week', label: 'Tuần' },
+                { id: 'month', label: 'Tháng' }
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setPeriod(p.id as any)}
+                  className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all z-10 ${period === p.id ? 'bg-white text-[#4B3621] shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Date Picker */}
+            <div className="relative">
               <button
                 onClick={() => setShowCalendar(!showCalendar)}
-                className="bg-gray-50 border-2 border-transparent hover:border-[#C2A383]/50 rounded-2xl px-6 py-4 font-black text-sm text-[#4B3621] outline-none transition-all flex items-center gap-3 shadow-inner"
+                className="w-full bg-[#FAF9F6] border border-gray-100 hover:border-[#C2A383] rounded-2xl px-4 py-3 font-black text-lg text-[#4B3621] outline-none transition-all flex items-center justify-between group"
               >
-                <i className="fas fa-calendar-alt text-[#C2A383]"></i>
-                {new Date(selectedDate).toLocaleDateString('vi-VN')}
+                <span>{new Date(selectedDate).toLocaleDateString('vi-VN')}</span>
+                <i className="fas fa-calendar-alt text-[#C2A383] group-hover:scale-110 transition-transform"></i>
               </button>
 
               {showCalendar && (
-                <div className="absolute top-full left-0 mt-4 z-[300] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-6 w-[320px] animate-slide-up">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="absolute top-full left-0 mt-2 z-[300] bg-white rounded-[24px] shadow-2xl border border-gray-100 p-4 w-full animate-slide-up">
+                  <div className="flex justify-between items-center mb-4">
                     <button type="button" onClick={handlePrevMonth} className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-[#C2A383] hover:bg-[#C2A383] hover:text-white transition-all"><i className="fas fa-chevron-left text-[10px]"></i></button>
-                    <span className="text-[11px] font-black text-[#4B3621] uppercase tracking-widest">Tháng {viewDate.getMonth() + 1} / {viewDate.getFullYear()}</span>
+                    <span className="text-[11px] font-black text-[#4B3621] uppercase tracking-widest">{viewDate.getMonth() + 1} / {viewDate.getFullYear()}</span>
                     <button type="button" onClick={handleNextMonth} className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-[#C2A383] hover:bg-[#C2A383] hover:text-white transition-all"><i className="fas fa-chevron-right text-[10px]"></i></button>
                   </div>
 
-                  <div className="grid grid-cols-7 gap-1 mb-4">
+                  <div className="grid grid-cols-7 gap-1 mb-2">
                     {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
-                      <div key={d} className="text-center text-[7px] font-black text-gray-300 uppercase py-2 tracking-tighter">{d}</div>
+                      <div key={d} className="text-center text-[8px] font-black text-gray-300 uppercase py-1">{d}</div>
                     ))}
                     {Array.from({ length: firstDayOfMonth(viewDate.getFullYear(), viewDate.getMonth()) }).map((_, i) => (
                       <div key={`empty-${i}`} />
@@ -116,7 +153,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                           key={day}
                           type="button"
                           onClick={() => handleSelectDay(day)}
-                          className={`w-9 h-9 rounded-xl text-[10px] font-black transition-all flex items-center justify-center ${isSelected ? 'bg-[#4B3621] text-white shadow-lg' : 'hover:bg-[#C2A383]/10 text-[#4B3621]'
+                          className={`aspect-square rounded-lg text-[10px] font-black transition-all flex items-center justify-center ${isSelected ? 'bg-[#4B3621] text-white shadow-md' : 'hover:bg-[#C2A383]/10 text-gray-600'
                             }`}
                         >
                           {day}
@@ -124,114 +161,84 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                       );
                     })}
                   </div>
-                  <button type="button" onClick={() => setShowCalendar(false)} className="w-full py-3 bg-gray-50 rounded-2xl text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-red-50 hover:text-red-400 transition-all">Đóng</button>
+                  <button
+                    onClick={() => {
+                      const d = new Date();
+                      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      setSelectedDate(today);
+                      setViewDate(new Date(today));
+                      setShowCalendar(false);
+                    }}
+                    className="w-full py-2.5 bg-[#C2A383]/10 text-[#C2A383] rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#C2A383] hover:text-white transition-all"
+                  >
+                    Hôm nay
+                  </button>
                 </div>
               )}
-
-              <button
-                onClick={() => {
-                  const today = new Date().toISOString().split('T')[0];
-                  setSelectedDate(today);
-                  setViewDate(new Date(today));
-                }}
-                className="bg-[#C2A383]/10 text-[#C2A383] px-6 rounded-2xl font-black text-[10px] uppercase hover:bg-[#C2A383] hover:text-white transition-all shadow-sm"
-              >
-                HÔM NAY
-              </button>
-            </div>
-          </div>
-
-          <div className="h-12 w-px bg-gray-100 hidden sm:block mx-2"></div>
-
-          <div className="flex flex-col gap-1 w-full sm:w-auto">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Phạm vi báo cáo</label>
-            <div className="bg-gray-50 p-1.5 rounded-[22px] flex gap-1 shadow-inner">
-              {[
-                { id: 'day', label: 'Xem 1 Ngày' },
-                { id: 'week', label: 'Xem 7 Ngày' },
-                { id: 'month', label: 'Xem 1 Tháng' }
-              ].map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setPeriod(p.id as any)}
-                  className={`px-6 py-2.5 rounded-[18px] text-[10px] font-black uppercase transition-all ${period === p.id ? 'bg-[#4B3621] text-white shadow-lg' : 'text-gray-400 hover:text-[#4B3621]'}`}
-                >
-                  {p.label}
-                </button>
-              ))}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] mb-1">Đang hiển thị dữ liệu</p>
-            <h4 className="text-lg font-black text-[#C2A383] uppercase tracking-tighter italic">{periodLabel}</h4>
-            <p className="text-[9px] font-bold text-gray-400 mt-1">{filteredOrders.length} đơn • {filteredExpenses.length} chi phí</p>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-[#C2A383] text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:scale-105 transition-transform active:scale-95"
-          >
-            <i className="fas fa-sync-alt mr-2"></i>
-            LÀM MỚI
-          </button>
-        </div>
-      </div>
-
-      {/* THẺ CHỈ SỐ LỚN */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="bg-white p-10 rounded-[56px] border border-gray-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 group-hover:scale-125 transition-transform duration-500"></div>
-          <div className="relative z-10">
-            <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner"><i className="fas fa-arrow-down"></i></span>
-              TỔNG THU
+        {/* RIGHT: Key Metrics */}
+        <div className="xl:w-2/3 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Revenue */}
+          <div className="bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-center relative overflow-hidden group">
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i className="fas fa-coins text-6xl text-emerald-500 transform rotate-12"></i>
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Tổng thu</p>
+            <h3 className="text-3xl lg:text-4xl font-black text-emerald-600 tracking-tighter">{formatVND(stats.rev)}</h3>
+            <p className="text-[10px] font-bold text-emerald-600/60 mt-2 flex items-center gap-1">
+              <i className="fas fa-arrow-up"></i> {filteredOrders.length} đơn hàng
             </p>
-            <h3 className="text-4xl lg:text-5xl font-black text-emerald-600 tracking-tighter">{formatVND(stats.rev)}đ</h3>
           </div>
-        </div>
 
-        <div className="bg-white p-10 rounded-[56px] border border-gray-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-16 -mt-16 group-hover:scale-125 transition-transform duration-500"></div>
-          <div className="relative z-10">
-            <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-500 shadow-inner"><i className="fas fa-arrow-up"></i></span>
-              TỔNG CHI
+          {/* Expense */}
+          <div className="bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm flex flex-col justify-center relative overflow-hidden group">
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i className="fas fa-receipt text-6xl text-red-500 transform -rotate-12"></i>
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Tổng chi</p>
+            <h3 className="text-3xl lg:text-4xl font-black text-red-500 tracking-tighter">{formatVND(stats.exp)}</h3>
+            <p className="text-[10px] font-bold text-red-500/60 mt-2 flex items-center gap-1">
+              <i className="fas fa-arrow-down"></i> {filteredExpenses.length} khoản chi
             </p>
-            <h3 className="text-4xl lg:text-5xl font-black text-red-500 tracking-tighter">{formatVND(stats.exp)}đ</h3>
           </div>
-        </div>
 
-        <div className="bg-[#4B3621] p-10 rounded-[56px] shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-125 transition-transform duration-500"></div>
-          <div className="relative z-10">
-            <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#C2A383] shadow-inner"><i className="fas fa-vault"></i></span>
-              LỢI NHUẬN
-            </p>
-            <h3 className={`text-4xl lg:text-5xl font-black tracking-tighter ${stats.profit >= 0 ? 'text-[#C2A383]' : 'text-red-400'}`}>
-              {formatVND(stats.profit)}đ
+          {/* Profit */}
+          <div className="bg-[#4B3621] p-5 rounded-[32px] shadow-lg flex flex-col justify-center relative overflow-hidden group">
+            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-colors"></div>
+            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Lợi nhuận ròng</p>
+            <h3 className={`text-3xl lg:text-4xl font-black tracking-tighter relative z-10 ${stats.profit >= 0 ? 'text-[#C2A383]' : 'text-red-400'}`}>
+              {formatVND(stats.profit)}
             </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-2 uppercase tracking-wide">
+              {periodLabel}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* DANH SÁCH CHI TIẾT SẮP XẾP THEO THỜI GIAN */}
-      <div className="bg-white rounded-[56px] shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-12 py-10 border-b border-gray-50 flex justify-between items-center bg-[#FAF9F6]">
-          <h4 className="font-black text-[#4B3621] uppercase text-lg tracking-tighter">Nhật ký thu chi chi tiết</h4>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">Sắp xếp theo thời gian mới nhất</span>
+      {/* BOTTOM SECTION: DATA TABLE (Fills remaining height) */}
+      <div className="flex-1 bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-0">
+        <div className="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-[#FAF9F6] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-200 text-gray-500 flex items-center justify-center">
+              <i className="fas fa-list text-xs"></i>
+            </div>
+            <h4 className="font-black text-[#4B3621] uppercase text-sm tracking-widest">Chi tiết giao dịch</h4>
+          </div>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">{filteredOrders.length + filteredExpenses.length} dòng dữ liệu</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100">
-                <th className="px-12 py-6">Thời gian</th>
-                <th className="px-6 py-6">Phân loại</th>
-                <th className="px-6 py-6">Nội dung giao dịch</th>
-                <th className="px-12 py-6 text-right">Giá trị (VNĐ)</th>
+        <div className="flex-1 overflow-y-auto p-0 scrollbar-hide">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 z-10 bg-white ring-1 ring-gray-50">
+              <tr className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm w-32 border-b border-gray-100/50">Thời gian</th>
+                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm w-32 text-center border-b border-gray-100/50">Loại</th>
+                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm border-b border-gray-100/50">Nội dung</th>
+                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm text-right border-b border-gray-100/50">Giá trị</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -239,39 +246,47 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                 ...filteredOrders.map(o => ({ ...o, type: 'IN' as const, time: o.createdAt })),
                 ...filteredExpenses.map(e => ({ ...e, type: 'OUT' as const, time: e.date }))
               ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).map((item: any, idx) => (
-                <tr key={idx} className="group hover:bg-gray-50 transition-all">
-                  <td className="px-12 py-7">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black text-[#4B3621]">{new Date(item.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                      <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest mt-1">{new Date(item.time).toLocaleDateString('vi-VN')}</span>
-                    </div>
+                <tr key={idx} className="group hover:bg-[#FAF9F6] transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-black text-[#4B3621]">{new Date(item.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-[9px] font-bold text-gray-300 block mt-0.5">{new Date(item.time).toLocaleDateString('vi-VN')}</span>
                   </td>
-                  <td className="px-6 py-7">
-                    <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border ${item.type === 'IN' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                      {item.type === 'IN' ? 'Thu nhập' : 'Chi phí'}
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${item.type === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                      }`}>
+                      <i className={`fas ${item.type === 'IN' ? 'fa-arrow-down' : 'fa-arrow-up'} text-[8px]`}></i>
+                      {item.type === 'IN' ? 'Thu' : 'Chi'}
                     </span>
                   </td>
-                  <td className="px-6 py-7">
-                    <span className="text-[15px] font-black text-[#4B3621]">
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-bold text-[#4B3621] line-clamp-1">
                       {item.type === 'IN' ? (
-                        item.tableId === 'MANG_VE'
-                          ? 'Khách lẻ mang về'
-                          : `${tables.find(t => t.id === item.tableId)?.name || `Bàn ${item.tableId}`}`
+                        item.tableId === 'MANG_VE' ? 'Khách mang về' : `${tables.find(t => t.id === item.tableId)?.name || `Bàn ${item.tableId}`}`
                       ) : item.description}
-                    </span>
+                    </p>
+                    {item.type === 'IN' && (
+                      <p className="text-[10px] text-gray-400 truncate w-48">{item.items?.map((i: any) => i.productName).join(', ')}</p>
+                    )}
                   </td>
-                  <td className={`px-12 py-7 text-right font-black text-xl tracking-tighter ${item.type === 'IN' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  <td className={`px-6 py-4 text-right font-black text-lg tracking-tighter ${item.type === 'IN' ? 'text-emerald-600' : 'text-red-500'}`}>
                     {item.type === 'IN' ? '+' : '-'}{formatVND(item.totalAmount || item.amount)}
                   </td>
                 </tr>
               ))}
+              {(filteredOrders.length === 0 && filteredExpenses.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 opacity-50">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-2xl">
+                        <i className="fas fa-inbox"></i>
+                      </div>
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Không có dữ liệu trong khoảng thời gian này</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-          {(filteredOrders.length === 0 && filteredExpenses.length === 0) && (
-            <div className="py-32 text-center bg-gray-50/20">
-              <p className="text-gray-300 font-black uppercase tracking-[0.3em] text-sm">Chưa có dữ liệu giao dịch trong phạm vi này</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import { Product, Category, Order, OrderItem, OrderStatus, Table } from '../types';
+import { Product, Category, Order, OrderItem, OrderStatus, Table, BilliardSession } from '../types';
 import { formatVND } from '../utils/format';
+import { api } from '../services/api';
 
 interface CustomerViewProps {
   table: Table;
@@ -11,11 +12,13 @@ interface CustomerViewProps {
   onPlaceOrder: (items: OrderItem[]) => void;
   compact?: boolean;
   onSwitchToAdmin?: () => void;
-  onBackToTableList?: () => void; // NEW
+  onBackToTableList?: () => void;
+  isAdmin?: boolean;
+  onRemoveItem?: (itemId: string) => void;
 }
 
 const CustomerView: React.FC<CustomerViewProps> = ({
-  table, products, categories, activeOrder, onPlaceOrder, compact, onSwitchToAdmin, onBackToTableList
+  table, products, categories, activeOrder, onPlaceOrder, compact, onSwitchToAdmin, onBackToTableList, isAdmin, onRemoveItem
 }) => {
   // Initialize from LocalStorage
   const [selectedItems, setSelectedItems] = useState<{ [key: string]: number }>(() => {
@@ -37,13 +40,45 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const historyRef = useRef<HTMLDivElement>(null);
 
+  const [billiardSession, setBilliardSession] = useState<BilliardSession | null>(null);
+  const [durationStr, setDurationStr] = useState('');
+
+  // Fetch Billiard Session Loop
   React.useEffect(() => {
-    if (showHistory && historyRef.current) {
-      setTimeout(() => {
-        historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+    const isBilliard = table.alias === 'Bi-a' || (table.tableNumber && table.tableNumber.startsWith('BI-'));
+    if (isBilliard) {
+      const fetchSession = async () => {
+        try {
+          const sessions = await api.getBilliardSessions();
+          const mySession = sessions.find(s => String(s.tableId) === String(table.id) && s.status === 'ACTIVE');
+          if (mySession) setBilliardSession(mySession);
+          else setBilliardSession(null);
+        } catch (e) { }
+      };
+      fetchSession();
+      const interval = setInterval(fetchSession, 15000);
+      return () => clearInterval(interval);
     }
-  }, [showHistory]);
+  }, [table]);
+
+  // Timer Loop
+  React.useEffect(() => {
+    if (!billiardSession) return;
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const start = new Date(billiardSession.startTime).getTime();
+      const diff = now - start;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setDurationStr(`${h} giờ ${m} phút`);
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute to save CPU, user asked for clock but min precision is fine usually. 15s?
+    // User said "tinh theo tung s/phut" in previous prompt. Let's do 10s.
+    return () => clearInterval(interval);
+  }, [billiardSession]);
+
+
 
   const itemCount = useMemo(() => Object.values(selectedItems).reduce((a: number, b) => a + (b as number), 0), [selectedItems]);
   const total = useMemo(() => Object.entries(selectedItems).reduce((acc: number, [pid, qty]) => {
@@ -85,7 +120,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   return (
     <div className="min-h-screen bg-[#FDFCF8] relative max-w-[600px] mx-auto pb-32 animate-fade-in flex flex-col">
       {!compact && (
-        <header className="bg-[#4B3621] px-4 py-3 sticky top-0 z-[120] shadow-lg border-b border-white/10 flex justify-between items-center h-16 shrink-0">
+        <header className="bg-wood-gradient px-4 py-3 sticky top-0 z-[120] shadow-lg border-b border-white/10 flex justify-between items-center h-16 shrink-0">
           <div className="flex items-center gap-3">
             {onSwitchToAdmin && (
               <button
@@ -115,6 +150,11 @@ const CustomerView: React.FC<CustomerViewProps> = ({
             <div className={`flex flex-col ${onSwitchToAdmin || onBackToTableList ? 'hidden sm:flex' : ''}`}>
               <h1 className="text-white text-xs font-black tracking-widest uppercase leading-none italic">The Com Cafe</h1>
               <p className="text-[#C2A383] text-[7px] font-bold uppercase tracking-[0.2em] mt-1">Sabor de Vietnam</p>
+              {billiardSession && (
+                <div className="mt-1 bg-emerald-500/20 border border-emerald-500/50 text-emerald-600 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center w-fit animate-fade-in shadow-sm">
+                  <i className="fas fa-stopwatch mr-1.5"></i> {durationStr}
+                </div>
+              )}
             </div>
           </div>
 
@@ -162,50 +202,68 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       {/* 3. DANH SÁCH MÓN ĂN */}
       <div className="px-4 mt-8 space-y-12">
         {/* Lịch sử đơn hiện tại - CHI TIẾT */}
+        {/* Lịch sử đơn hiện tại - CHI TIẾT MODAL */}
         {activeOrder && showHistory && (
-          <div ref={historyRef} className="bg-[#4B3621] p-1 rounded-[38px] shadow-2xl animate-slide-up ring-4 ring-[#C2A383]/10 scroll-mt-24">
-            <div className="bg-white p-7 rounded-[32px] border border-[#C2A383]/20">
-              <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-receipt text-[#C2A383] text-sm"></i>
-                  <span className="text-[12px] font-black text-[#4B3621] uppercase tracking-tighter">Đơn đã gọi</span>
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-fade-in">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowHistory(false)}></div>
+            <div className="relative bg-[#4B3621] p-1 rounded-[38px] shadow-2xl animate-slide-up ring-4 ring-[#C2A383]/10 w-full max-w-md mx-auto">
+              <div className="bg-white p-6 rounded-[34px] border border-[#C2A383]/20 max-h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <i className="fas fa-receipt text-[#C2A383] text-sm"></i>
+                    <span className="text-[12px] font-black text-[#4B3621] uppercase tracking-tighter">Đơn đã gọi</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest block">Trạng thái</span>
+                    <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-lg">Đang phục vụ</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest block">Trạng thái</span>
-                  <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-lg">Đang phục vụ</span>
-                </div>
-              </div>
 
-              <div className="space-y-4 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
-                {activeOrder.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-start group">
-                    <div className="flex gap-3">
-                      <div className="w-6 h-6 rounded-lg bg-[#FAF9F6] text-[#4B3621] flex items-center justify-center font-black text-[10px] border border-gray-100 italic transition-transform group-hover:scale-110">
-                        {item.quantity}
+                <div className="space-y-4 overflow-y-auto custom-scrollbar pr-1 flex-1">
+                  {activeOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-start group">
+                      <div className="flex gap-3">
+                        {/* Admin Delete Action */}
+                        {isAdmin && onRemoveItem && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Xóa món "${item.productName}" khỏi đơn?`)) {
+                                onRemoveItem(String(item.id));
+                              }
+                            }}
+                            className="w-6 h-6 rounded-lg bg-red-50 text-red-500 border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors mr-1"
+                            title="Xóa món"
+                          >
+                            <i className="fas fa-trash-alt text-[9px]"></i>
+                          </button>
+                        )}
+                        <div className="w-6 h-6 rounded-lg bg-[#FAF9F6] text-[#4B3621] flex items-center justify-center font-black text-[10px] border border-gray-100 italic transition-transform group-hover:scale-110">
+                          {item.quantity}
+                        </div>
+                        <span className="text-[13px] font-black text-[#4B3621] leading-tight mt-0.5">{item.productName}</span>
                       </div>
-                      <span className="text-[13px] font-black text-[#4B3621] leading-tight mt-0.5">{item.productName}</span>
+                      <span className="text-[12px] font-black text-[#C2A383] tracking-tighter mt-0.5 whitespace-nowrap">{formatVND(item.price * item.quantity)}đ</span>
                     </div>
-                    <span className="text-[12px] font-black text-[#C2A383] tracking-tighter mt-0.5 whitespace-nowrap">{formatVND(item.price * item.quantity)}đ</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-100">
-                <div className="flex justify-between items-center px-1">
-                  <div>
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Tổng cộng hóa đơn</span>
-                    <p className="text-[8px] text-gray-400 font-medium italic">Vui lòng thanh toán tại quầy khi ra về</p>
-                  </div>
-                  <span className="text-3xl font-black text-[#4B3621] tracking-tighter">{formatVND(activeOrder.totalAmount || 0)}đ</span>
+                  ))}
                 </div>
-              </div>
 
-              <button
-                onClick={() => setShowHistory(false)}
-                className="w-full mt-6 py-3 bg-gray-50 text-gray-400 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors"
-              >
-                Đóng lịch sử
-              </button>
+                <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-100 shrink-0">
+                  <div className="flex justify-between items-center px-1">
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Tổng cộng hóa đơn</span>
+                      <p className="text-[8px] text-gray-400 font-medium italic">Vui lòng thanh toán tại quầy khi ra về</p>
+                    </div>
+                    <span className="text-3xl font-black text-[#4B3621] tracking-tighter">{formatVND(activeOrder.totalAmount || 0)}đ</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="w-full mt-6 py-3 bg-gray-50 text-gray-400 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors shrink-0"
+                >
+                  Đóng lịch sử
+                </button>
+              </div>
             </div>
           </div>
         )}

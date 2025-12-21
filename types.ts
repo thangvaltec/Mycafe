@@ -56,6 +56,19 @@ export interface Table {
   guestName?: string; // Tên khách hiện tại
   isOccupied: boolean;
   currentOrderId?: string;
+  status?: string; // e.g. "Empty", "Occupied"
+}
+
+export interface BilliardSession {
+  id: string;
+  tableId: number; // Linked to Table ID (integer)
+  guestName: string;
+  numPeople: number;
+  pricePerHour: number;
+  startTime: string;
+  endTime?: string;
+  totalAmount: number;
+  status: 'ACTIVE' | 'PAID';
 }
 
 export interface Expense {

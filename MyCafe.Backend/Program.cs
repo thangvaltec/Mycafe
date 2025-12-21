@@ -90,12 +90,33 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             // db.Database.EnsureDeleted(); // RESET DB REQUESTED
             db.Database.EnsureCreated();
             
-            // PATCH: Add order_number for existing databases
             try 
             {
                db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number SERIAL;");
             } 
             catch { /* Ignore if fails or column exists */ }
+
+            // PATCH: Create billiard_sessions table for existing databases
+            try
+            {
+                var createBilliardTableSql = @"
+                    CREATE TABLE IF NOT EXISTS billiard_sessions (
+                        id UUID PRIMARY KEY,
+                        table_id INT,
+                        guest_name VARCHAR(100) NOT NULL,
+                        num_people INT NOT NULL DEFAULT 2,
+                        price_per_hour DECIMAL(18, 2) NOT NULL,
+                        start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        end_time TIMESTAMP WITH TIME ZONE,
+                        total_amount DECIMAL(18, 2) DEFAULT 0,
+                        status VARCHAR(20) DEFAULT 'ACTIVE'
+                    );";
+                db.Database.ExecuteSqlRaw(createBilliardTableSql);
+            }
+            catch (Exception ex) 
+            {
+                Console.WriteLine($"[PATCH WARNING] Could not create billiard_sessions: {ex.Message}");
+            }
 
             // 1. Seed Users
             if (!db.Users.Any())
@@ -108,30 +129,52 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                  db.Users.Add(new User { Username = "admin", Password = "admin123", Role = "ADMIN" });
             }
 
-            // 2. Seed Custom Data (Tables/Categories) if DB is empty
-            if (!db.Tables.Any())
+            // 2. Seed Initial Tables (Fixed Configuration: 4 Billiard, 10 Cafe, 1 Takeaway)
+            
+            // A. Billiard Tables (BI-01 to BI-04) - "4 ban bia"
+            if (!db.Tables.Any(t => t.Alias == "Bi-a"))
             {
-                // 1. Insert tables 1-10 first (IDs 1-10)
                 var tables = new List<Table>();
-                for (int i = 1; i <= 10; i++)
+                for (int i = 1; i <= 4; i++)
                 {
-                    tables.Add(new Table { TableNumber = i.ToString("00"), Name = $"Bàn {i}", Status = "Empty" });
+                    tables.Add(new Table { TableNumber = $"BI-{i:00}", Name = $"Bàn Bida {i:00}", Status = "Empty", Alias = "Bi-a" });
                 }
                 db.Tables.AddRange(tables);
-                db.SaveChanges(); // Force IDs 1-10
+                Console.WriteLine("✅ Added 4 Billiard Tables");
+            }
 
-                // 2. Insert Mang Ve (ID 11)
-                db.Tables.Add(new Table { TableNumber = "MV", Name = "Mang về", Status = "Empty", Alias = "Takeaway" });
-                db.SaveChanges(); // Force ID 11
+            // B. Cafe Tables (01 to 10) - "1 den 10 ban cafe"
+            if (!db.Tables.Any(t => t.TableNumber == "01" && t.Alias == "Cafe"))
+            {
+                // Check if old "01" exists without Alias, if so, update them? 
+                // Simpler: Just add if missing. If collision on TableNumber (unique constraint?), we might fail.
+                // Assuming empty DB or clean state as user said "ngay tu ban dau".
+                // But for robust patching:
+                for (int i = 1; i <= 10; i++)
+                {
+                    var num = $"{i:00}";
+                    if (!db.Tables.Any(t => t.TableNumber == num))
+                    {
+                        db.Tables.Add(new Table { TableNumber = num, Name = $"Bàn {i}", Status = "Empty", Alias = "Cafe" });
+                    }
+                }
+                Console.WriteLine("✅ Verified 10 Cafe Tables");
+            }
+
+            // C. Takeaway Table (11) - "ban 11 la mang ve"
+            if (!db.Tables.Any(t => t.TableNumber == "11"))
+            {
+                db.Tables.Add(new Table { TableNumber = "11", Name = "Mang về", Status = "Empty", Alias = "Takeaway" });
+                Console.WriteLine("✅ Added Takeaway Table (11)");
             }
             else
             {
-                // Ensure Takeaway table exists even if other tables were already created
-                var hasTakeaway = db.Tables.Any(t => t.Alias == "Takeaway" || t.TableNumber == "MV");
-                if (!hasTakeaway)
+                // Verify alias update if it exists but wrong alias
+                var t11 = db.Tables.FirstOrDefault(t => t.TableNumber == "11");
+                if (t11 != null && t11.Alias != "Takeaway")
                 {
-                    db.Tables.Add(new Table { TableNumber = "MV", Name = "Mang về", Status = "Empty", Alias = "Takeaway" });
-                    Console.WriteLine("✅ Added missing 'Mang về' (Takeaway) table");
+                    t11.Name = "Mang về";
+                    t11.Alias = "Takeaway";
                 }
             }
 
