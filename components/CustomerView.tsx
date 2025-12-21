@@ -10,12 +10,27 @@ interface CustomerViewProps {
   activeOrder?: Order;
   onPlaceOrder: (items: OrderItem[]) => void;
   compact?: boolean;
+  onSwitchToAdmin?: () => void;
+  onBackToTableList?: () => void; // NEW
 }
 
 const CustomerView: React.FC<CustomerViewProps> = ({
-  table, products, categories, activeOrder, onPlaceOrder, compact
+  table, products, categories, activeOrder, onPlaceOrder, compact, onSwitchToAdmin, onBackToTableList
 }) => {
-  const [selectedItems, setSelectedItems] = useState<{ [key: string]: number }>({});
+  // Initialize from LocalStorage
+  const [selectedItems, setSelectedItems] = useState<{ [key: string]: number }>(() => {
+    try {
+      const saved = localStorage.getItem(`cart_table_${table.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  // Save to LocalStorage on change
+  React.useEffect(() => {
+    localStorage.setItem(`cart_table_${table.id}`, JSON.stringify(selectedItems));
+  }, [selectedItems, table.id]);
+
+  // ... (rest of states) ...
   const [activeCat, setActiveCat] = useState<string>(categories[0]?.id || '');
   const [showSheet, setShowSheet] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -62,18 +77,42 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       return { productId: pid, productName: p.name, price: p.price, quantity: qty as number };
     });
     onPlaceOrder(items);
-    setSelectedItems({});
+    setSelectedItems({}); // Clear cart
+    localStorage.removeItem(`cart_table_${table.id}`); // Clear storage
     setShowSheet(false);
   };
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] relative max-w-[600px] mx-auto pb-32 animate-fade-in flex flex-col">
-      {/* 1. THANH TOP-BAR CỐ ĐỊNH (CHỈ HIỂN THỊ KHI KHÔNG PHẢI GIAO DIỆN NHÂN VIÊN) */}
       {!compact && (
         <header className="bg-[#4B3621] px-4 py-3 sticky top-0 z-[120] shadow-lg border-b border-white/10 flex justify-between items-center h-16 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#C2A383] rounded-xl flex items-center justify-center text-[#4B3621] text-lg font-black shadow-inner">H</div>
-            <div className="flex flex-col">
+            {onSwitchToAdmin && (
+              <button
+                onClick={onSwitchToAdmin}
+                className="bg-[#C2A383] text-[#4B3621] w-9 h-9 rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                title="Về trang Quản lý"
+              >
+                <i className="fas fa-user-shield text-xs"></i>
+              </button>
+            )}
+
+            {onBackToTableList && (
+              <button
+                onClick={onBackToTableList}
+                className="bg-[#F3F4F6] text-[#4B3621] px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg active:scale-95 transition-transform"
+              >
+                <i className="fas fa-th text-xs"></i>
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Chọn bàn</span>
+                <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">DS Bàn</span>
+              </button>
+            )}
+
+            {!onSwitchToAdmin && !onBackToTableList && (
+              <div className="w-9 h-9 bg-[#C2A383] rounded-xl flex items-center justify-center text-[#4B3621] text-lg font-black shadow-inner">H</div>
+            )}
+
+            <div className={`flex flex-col ${onSwitchToAdmin || onBackToTableList ? 'hidden sm:flex' : ''}`}>
               <h1 className="text-white text-xs font-black tracking-widest uppercase leading-none italic">The Com Cafe</h1>
               <p className="text-[#C2A383] text-[7px] font-bold uppercase tracking-[0.2em] mt-1">Sabor de Vietnam</p>
             </div>

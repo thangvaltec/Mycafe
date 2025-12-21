@@ -31,13 +31,14 @@ interface AdminViewProps {
   onUpdateCategory: (c: Category) => void;
   onDeleteCategory: (id: string) => void;
   onLogout: () => void;
+  onSwitchMode: () => void; // NEW
 }
 
 const AdminView: React.FC<AdminViewProps> = ({
   tables, products, categories, orders, expenses,
   onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateTable, onDeleteTable, onUpdateOrder, onAddExpense, onPlaceOrder, onAddTable,
   onSetOrders, onSetExpenses, onSetTables, onAddCategory, onUpdateCategory, onDeleteCategory,
-  onLogout
+  onLogout, onSwitchMode
 }) => {
   const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'orders' | 'menu' | 'expenses' | 'report'>('pos');
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
@@ -123,30 +124,44 @@ const AdminView: React.FC<AdminViewProps> = ({
 
       {/* Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden pb-16 lg:pb-0">
-        <header className="h-16 lg:h-24 bg-white border-b border-gray-100 flex items-center justify-between px-6 lg:px-10 shrink-0 z-10">
-          <div className="flex flex-col">
-            <h2 className="text-lg lg:text-2xl font-black text-[#4B3621] uppercase tracking-tighter">
+        <header className="h-16 lg:h-24 bg-white border-b border-gray-100 flex items-center justify-between px-4 lg:px-10 shrink-0 z-10 relative">
+          {/* LEFT: Title */}
+          <div className="flex items-center">
+            <h2 className="text-lg lg:text-2xl font-black text-[#4B3621] uppercase tracking-tighter truncate leading-none">
               {activeTab === 'pos' && 'Phục vụ tại bàn'}
-              {activeTab === 'takeaway' && 'Đơn hàng mang về'}
+              {activeTab === 'takeaway' && 'Đơn mang về'}
               {activeTab === 'orders' && 'Lịch sử hóa đơn'}
-              {activeTab === 'menu' && 'Quản lý thực đơn'}
-              {activeTab === 'expenses' && 'Chi phí vận hành'}
-              {activeTab === 'report' && 'Báo cáo doanh thu'}
+              {activeTab === 'menu' && 'Thực đơn'}
+              {activeTab === 'expenses' && 'Chi phí'}
+              {activeTab === 'report' && 'Doanh thu'}
             </h2>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest lg:hidden">Com Cafe Coffee System</p>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-[8px] lg:text-[10px] text-gray-400 font-black uppercase tracking-widest italic">Doanh thu tổng</span>
-              <span className="text-sm lg:text-xl font-black text-[#2D5A27]">{revenue.toLocaleString()}đ</span>
+          {/* RIGHT: Actions */}
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Revenue - Hidden on very small screens */}
+            <div className="hidden md:flex flex-col items-end mr-2">
+              <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest italic">Doanh thu</span>
+              <span className="text-lg font-black text-[#2D5A27] leading-none">{revenue.toLocaleString()}đ</span>
             </div>
+
+            {/* Switch Mode Button */}
+            <button
+              onClick={onSwitchMode}
+              className="h-10 px-4 bg-[#4B3621] text-white rounded-xl flex items-center gap-2 hover:bg-[#C2A383] transition-all shadow-lg active:scale-95"
+            >
+              <i className="fas fa-eye text-xs"></i>
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Giao diện khách</span>
+              <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Khách</span>
+            </button>
+
+            {/* Logout Button */}
             <button
               onClick={onLogout}
-              className="w-10 h-10 lg:w-14 lg:h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all border border-gray-100"
+              className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all border border-gray-100 shadow-sm active:scale-95"
               title="Đăng xuất"
             >
-              <i className="fas fa-sign-out-alt"></i>
+              <i className="fas fa-sign-out-alt text-sm"></i>
             </button>
           </div>
         </header>

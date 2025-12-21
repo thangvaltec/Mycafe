@@ -1,6 +1,6 @@
 import { Category, Expense, Product, Order, PaymentMethod, Table } from '../types';
 
-const API_URL = (import.meta.env.VITE_API_URL as string) || '/api'; // Use env var for Prod, fallback to proxy for Dev
+const API_URL = (import.meta.env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
 
 // --- Helper ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {

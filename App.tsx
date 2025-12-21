@@ -15,7 +15,7 @@ const App: React.FC = () => {
   });
   const [selectedTableId, setSelectedTableId] = useState<string>(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('tableId') || '01';
+    return urlParams.get('tableId') || '';
   });
   const [tables, setTables] = useState<Table[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,12 +47,7 @@ const App: React.FC = () => {
       setOrders(o);
       setExpenses(e || []);
 
-      if (t.length > 0 && !t.find(tbl => String(tbl.id) === String(selectedTableId))) {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (!urlParams.get('tableId')) {
-          setSelectedTableId(String(t[0].id));
-        }
-      }
+
       setIsLoading(false);
     } catch (err) {
       console.error("Failed to load data", err);
@@ -239,31 +234,6 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-[1440px] mx-auto min-h-screen">
-      {!isQRCodeAccess && (
-        <div className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex gap-4 bg-[#1A1A19]/90 backdrop-blur px-6 py-3 rounded-[32px] border border-white/10 shadow-2xl items-center">
-          <button
-            onClick={() => setRole(role === 'ADMIN' ? 'CUSTOMER' : 'ADMIN')}
-            className={`px-6 py-2 rounded-full text-[10px] font-black tracking-widest transition-all ${role === 'ADMIN' ? 'bg-[#C2A383] text-[#4B3621]' : 'text-white/40'
-              }`}
-          >
-            {role === 'ADMIN' ? 'QUẢN LÝ / POS' : 'GIAO DIỆN KHÁCH'}
-          </button>
-
-          {role === 'CUSTOMER' && (
-            <div className="flex items-center gap-3 pl-4 border-l border-white/10">
-              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">Đang ở:</span>
-              <select
-                value={selectedTableId}
-                onChange={(e) => setSelectedTableId(e.target.value)}
-                className="bg-transparent text-[#C2A383] text-[10px] font-black border-none outline-none cursor-pointer uppercase tracking-widest"
-              >
-                {tables.map(t => <option key={t.id} value={t.id} className="bg-[#1a1a1a]">{t.name}</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-      )}
-
       {role === 'ADMIN' ? (
         <AdminView
           tables={tables}
@@ -287,6 +257,7 @@ const App: React.FC = () => {
           onUpdateCategory={handleUpdateCategory}
           onDeleteCategory={handleDeleteCategory}
           onLogout={handleLogout}
+          onSwitchMode={() => setRole('CUSTOMER')} // NEW PROP
         />
       ) : (
         currentCustomerTable ? (
@@ -296,19 +267,78 @@ const App: React.FC = () => {
             categories={categories}
             activeOrder={orders.find(o => String(o.tableId) === String(selectedTableId) && (o.status !== 'PAID' && o.status !== OrderStatus.PAID))}
             onPlaceOrder={(items) => handlePlaceOrder(selectedTableId, items)}
+            // Pass admin switch if logged in as admin
+            onSwitchToAdmin={isLoggedIn && localStorage.getItem('userRole') === 'ADMIN' ? () => setRole('ADMIN') : undefined}
+            onBackToTableList={isLoggedIn ? () => setSelectedTableId('') : undefined}
           />
         ) : (
-          <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] p-10 text-center">
-            <div className="space-y-6">
-              <i className="fas fa-exclamation-triangle text-4xl text-red-400"></i>
-              <h3 className="text-xl font-black text-[#4B3621]">KHÔNG TÌM THẤY BÀN</h3>
-              <p className="text-xs text-gray-500 font-bold">Mã QR này có vẻ không hợp lệ hoặc bàn đã bị xóa khỏi hệ thống. Vui lòng quét lại mã khác.</p>
-              <button onClick={() => window.location.href = '/'} className="px-8 py-3 bg-[#4B3621] text-white rounded-2xl font-black text-[10px] uppercase">Về trang chủ</button>
+
+          isLoggedIn ? (
+            <div className="min-h-screen bg-[#FDFCF8] p-6 lg:p-10">
+              <div className="max-w-4xl mx-auto space-y-10">
+                <div className="text-center space-y-4">
+                  <i className="fas fa-user-shield text-4xl text-[#4B3621]"></i>
+                  <h1 className="text-3xl font-black text-[#4B3621] uppercase tracking-tighter">Chế độ khách (Admin)</h1>
+                  <p className="text-sm font-bold text-gray-400">Chọn bàn để xem dưới giao diện khách hàng</p>
+                </div >
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  {tables.map(t => {
+                    // Check for unsent cart in local storage
+                    const cartKey = `cart_table_${t.id}`;
+                    const savedCart = localStorage.getItem(cartKey);
+                    let cartCount = 0;
+                    if (savedCart) {
+                      try {
+                        const parsed = JSON.parse(savedCart);
+                        cartCount = Object.values(parsed).reduce((a: any, b: any) => a + b, 0) as number;
+                      } catch { }
+                    }
+
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTableId(String(t.id))}
+                        className={`
+                        relative p-6 rounded-[24px] border-2 transition-all flex flex-col items-center justify-center gap-2 aspect-square shadow-sm
+                        ${t.isOccupied
+                            ? 'bg-gray-50 border-gray-100 text-gray-400 opacity-80'
+                            : 'bg-white border-gray-100 text-[#4B3621] hover:border-[#C2A383] hover:shadow-md hover:scale-[1.02] active:scale-95'
+                          }
+                      `}
+                      >
+                        <span className="text-3xl font-black">{t.name.replace('Bàn ', '')}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t.name}</span>
+                        {t.isOccupied && <span className="absolute top-4 right-4 text-[8px] bg-gray-200 px-2 py-0.5 rounded-full font-bold">ĐANG DÙNG</span>}
+                        {cartCount > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-lg border-2 border-white animate-bounce-subtle z-10">
+                            {cartCount} món chưa gửi
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="text-center flex gap-4 justify-center">
+                  <button onClick={() => setRole('ADMIN')} className="text-xs font-black text-white bg-[#4B3621] px-6 py-3 rounded-xl uppercase tracking-widest shadow-lg hover:bg-[#C2A383] transition-colors">
+                    <i className="fas fa-arrow-left mr-2"></i> Quay lại Admin
+                  </button>
+                </div>
+              </div >
+            </div >
+          ) : (
+            <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] p-10 text-center">
+              <div className="space-y-6">
+                <i className="fas fa-qrcode text-6xl text-gray-300 animate-pulse"></i>
+                <h3 className="text-2xl font-black text-[#4B3621] uppercase">Vui lòng quét mã QR</h3>
+                <p className="text-sm text-gray-500 font-bold max-w-xs mx-auto">Bạn cần quét mã QR tại bàn để truy cập vào thực đơn.</p>
+              </div>
             </div>
-          </div>
+          )
         )
       )}
-    </div>
+    </div >
   );
 };
 

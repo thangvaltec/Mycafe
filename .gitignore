@@ -52,6 +52,3 @@ _ReSharper*/
 MyCafe.Backend/bin/
 MyCafe.Backend/obj/
 *.ps1
-!comprehensive_api_test.ps1
-!verify_delete_block.ps1
-!final_system_check.ps1

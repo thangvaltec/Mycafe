@@ -62,7 +62,7 @@ Test-Step "Place Order (Table 1)" {
     $orderData = @{
         tableId = 1 # ID 1 is Table 1
         items   = @(
-            @{ productId = $p.id; quantity = 1 }
+            @{ productId = $p.id; quantity = 1; productName = "checking"; price = 0 }
         )
     } | ConvertTo-Json
     

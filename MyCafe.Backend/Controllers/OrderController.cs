@@ -77,15 +77,26 @@ public class OrderController : ControllerBase
         // Add items
         foreach (var itemDto in request.Items)
         {
-            // Optional: Validate product price from DB to prevent tampering
-            // But trusting frontend for now as per requirements "simple"
+            decimal finalPrice = itemDto.Price;
+            string finalName = itemDto.ProductName;
+
+            // Robust: Look up price from DB to ensure validity and non-zero
+            if (itemDto.ProductId.HasValue)
+            {
+                var product = await _context.MenuItems.FindAsync(itemDto.ProductId.Value);
+                if (product != null)
+                {
+                    finalPrice = product.Price;
+                    finalName = product.Name; // Ensure name is correct too
+                }
+            }
             
             var orderItem = new OrderItem
             {
                 OrderId = order.Id,
                 ProductId = itemDto.ProductId,
-                ProductName = itemDto.ProductName,
-                Price = itemDto.Price,
+                ProductName = finalName ?? "Món lạ",
+                Price = finalPrice,
                 Quantity = itemDto.Quantity
             };
             order.Items.Add(orderItem);

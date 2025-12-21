@@ -129,18 +129,18 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
   // ... (inside return)
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4 px-2 lg:px-0 bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-4">
-          <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter">Sơ đồ bàn</h3>
-          <div className="flex items-center gap-2 bg-[#F3F4F6] px-3 py-1.5 rounded-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pl-2 gap-4">
+        <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter">Sơ đồ bàn</h3>
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-2 bg-white border border-gray-100 px-3 py-2 rounded-2xl shadow-sm">
             <div className={`w-2 h-2 rounded-full ${isEditMode ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
             <label className="text-[10px] font-bold text-gray-500 uppercase cursor-pointer select-none">
               <input type="checkbox" checked={isEditMode} onChange={handleToggleEditMode} className="hidden" />
-              Chế độ chỉnh sửa
+              Chỉnh sửa
             </label>
           </div>
+          <button onClick={onAddTable} className="bg-[#4B3621] text-white px-6 py-2 rounded-2xl font-black text-[10px] uppercase shadow-lg active:scale-95 hover:bg-[#C2A383] transition-all">+ Thêm bàn</button>
         </div>
-        <button onClick={onAddTable} className="bg-[#4B3621] text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase transition-all shadow-lg hover:shadow-xl active:scale-95 border-2 border-[#4B3621] hover:bg-white hover:text-[#4B3621]">+ THÊM BÀN</button>
       </div>
 
       {showEditPasswordModal && (
@@ -166,7 +166,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-6">
         {tables.map(t => {
           const tableOrder = orders.find(o => o.tableId === t.id && o.status !== OrderStatus.PAID);
           return (
@@ -205,7 +205,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
                   <>
                     <button onClick={() => { setSelectedTable(t); setShowOpenTableModal(true); }} className="bg-gray-50 hover:bg-[#4B3621] hover:text-white text-[#4B3621] py-4 rounded-2xl font-black text-[10px] uppercase transition-all border border-gray-100 italic">Mở bàn</button>
                     <div className="flex gap-2">
-                      <button onClick={() => { setQrTable(t); setShowQRModal(true); }} className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-4 rounded-2xl font-black text-[10px] uppercase active:scale-95 transition-all"><i className="fas fa-qrcode"></i></button>
+                      <button onClick={() => { setQrTable(t); setShowQRModal(true); }} className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-4 rounded-2xl font-black text-[10px] uppercase active:scale-95 transition-all flex items-center justify-center gap-2"><i className="fas fa-qrcode text-lg"></i> Mã QR</button>
                       {isEditMode && (
                         <button onClick={(e) => { e.stopPropagation(); onDeleteTable(t.id); }} className="w-12 bg-red-50 text-red-500 border border-red-100 py-4 rounded-2xl font-black text-[10px] uppercase active:scale-95 transition-all hover:bg-red-500 hover:text-white" title="Xóa bàn"><i className="fas fa-trash"></i></button>
                       )}
