@@ -210,13 +210,13 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
         }
     };
 
-    const handleProcessPayment = async (method: PaymentMethod, receivedAmount: number) => {
+    const handleProcessPayment = async (method: PaymentMethod, receivedAmount: number, finalStartTime?: string, finalEndTime?: string) => {
         if (!checkoutBill || !checkoutSession) return;
         try {
-            await api.billiardCheckout(checkoutBill.tableId, method, receivedAmount);
+            await api.billiardCheckout(checkoutBill.tableId, method, receivedAmount, finalStartTime, finalEndTime);
             alert("Thanh toán thành công!");
-            setCheckoutBill(null);
             setCheckoutSession(null);
+            setCheckoutBill(null);
             fetchData();
         } catch (err: any) {
             alert('Lỗi thanh toán: ' + err.message);
@@ -227,7 +227,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
     const getCheckoutOrder = (): Order | null => {
         if (!checkoutBill) return null;
         return {
-            id: checkoutBill.orderId || `bill-${checkoutBill.tableId}-${Date.now()}`,
+            id: checkoutBill.orderId || `session-${checkoutSession.id}`,
             orderNumber: 0,
             tableId: String(checkoutBill.tableId),
             status: OrderStatus.PENDING,
@@ -331,7 +331,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                                     </div>
                                     <div className="bg-[#2A1E12] rounded-2xl p-4 border border-white/5 mb-4">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black uppercase text-gray-500">Tạm tính (Ước lượng):</span>
+                                            <span className="text-[10px] font-black uppercase text-gray-500">Tạm tính:</span>
                                             <span className="text-3xl font-black text-emerald-400 tracking-tighter">{formatVND(total)}đ</span>
                                         </div>
                                         {foodOrder && (
@@ -477,7 +477,13 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
             {checkoutBill && checkoutSession && (
                 <CheckoutModal
                     order={getCheckoutOrder()!}
-                    table={tables.find(t => t.id === String(checkoutSession.tableId))}
+                    table={{
+                        id: String(checkoutSession.tableId),
+                        name: tables.find(t => t.id === String(checkoutSession.tableId))?.name || `Bàn ${checkoutBill.tableId}`,
+                        guestName: checkoutSession.guestName,
+                        startTime: checkoutSession.startTime // Propagate original start time
+                    }}
+                    isBilliard={true}
                     onClose={() => { setCheckoutSession(null); setCheckoutBill(null); }}
                     onSuccess={() => {
                         setCheckoutSession(null);

@@ -255,12 +255,12 @@ namespace MyCafe.Backend.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("OrderNumber")
+                    b.Property<int?>("OrderNumber")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("order_number");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderNumber"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int?>("OrderNumber"));
 
                     b.Property<decimal?>("PaymentAmount")
                         .HasColumnType("numeric")

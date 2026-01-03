@@ -1,6 +1,6 @@
 import { Category, Expense, Product, Order, PaymentMethod, Table, BilliardSession } from '../types';
 
-const API_URL = (import.meta.env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
+const API_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.151.50:5238/api'; // Use env var for Prod, fallback to IP for Dev
 
 // --- Helper ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
@@ -136,6 +136,10 @@ export const api = {
             body: JSON.stringify(body)
         });
     },
+    // Alias for explicit order checkout
+    checkoutOrder: (orderId: string | number, paymentMethod: PaymentMethod, receivedAmount: number) => {
+        return api.checkout(orderId, paymentMethod, receivedAmount, true);
+    },
 
     // Reports & Expenses
     getStats: (period = 'daily') => fetchApi(`/report/stats?period=${period}`),
@@ -174,11 +178,16 @@ export const api = {
 
     // Unified Billing
     getBill: (tableId: number) => fetchApi<any>(`/billiard/${tableId}/bill`),
-    billiardCheckout: (tableId: number, paymentMethod: string, paymentAmount?: number) => fetchApi(`/billiard/${tableId}/checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod, paymentAmount })
-    }),
+    // Unified Checkout with Manual Adjustment Support
+    billiardCheckout: async (tableId: number, paymentMethod: string, paymentAmount?: number, finalStartTime?: string, finalEndTime?: string) => {
+        const res = await fetch(`${API_URL}/billiard/${tableId}/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentMethod, paymentAmount, finalStartTime, finalEndTime })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    },
 };
 
 const mapToProduct = (item: any): Product => ({

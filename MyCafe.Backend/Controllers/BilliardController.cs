@@ -21,7 +21,7 @@ public class BilliardController : ControllerBase
     public async Task<IActionResult> GetSessions()
     {
         var sessions = await _context.BilliardSessions
-            .Where(s => s.Status == "ACTIVE" || (s.Status == "PAID" && s.EndTime > DateTime.UtcNow.AddMinutes(-5))) // Show active and recently paid (optional buffer)
+            .Where(s => s.Status == "ACTIVE")
             .OrderByDescending(s => s.StartTime)
             .ToListAsync();
         return Ok(sessions);
@@ -145,39 +145,56 @@ public class BilliardController : ControllerBase
     [HttpPost("{tableId}/checkout")]
     public async Task<IActionResult> Checkout(int tableId, [FromBody] BilliardCheckoutRequest request)
     {
+        Console.WriteLine($"[Checkout] INITIATED for Table {tableId}");
+        Console.WriteLine($"[Checkout] Request Data: Method={request.PaymentMethod}, Start={request.FinalStartTime}, End={request.FinalEndTime}");
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var session = await _context.BilliardSessions
                 .FirstOrDefaultAsync(s => s.TableId == tableId && s.Status == "ACTIVE");
+            Console.WriteLine($"[Checkout] Found Session: {session?.Id} (Status: {session?.Status})");
 
             var order = await _context.Orders
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.TableId == tableId && (o.Status == "NEW" || o.Status == "PROCESSING" || o.Status == "COMPLETED"));
+            Console.WriteLine($"[Checkout] Found Order: {order?.Id} (Status: {order?.Status})");
             
             var table = await _context.Tables.FirstOrDefaultAsync(t => t.Id == tableId);
 
-            if (session == null && order == null) return BadRequest("Không có gì để thanh toán!");
+            if (session == null && order == null) 
+            {
+                Console.WriteLine("[Checkout] ERROR: No Session and No Order found!");
+                return BadRequest("Không có gì để thanh toán!");
+            }
 
-            var now = DateTime.UtcNow;
+            // Use Manual Times or Current Time
+            var finalEndTime = request.FinalEndTime ?? DateTime.UtcNow;
+            
             decimal totalAmount = 0;
             var invoice = new Invoice
             {
                 TableId = tableId,
                 PaymentMethod = request.PaymentMethod,
-                CreatedAt = now,
+                CreatedAt = finalEndTime,
                 BilliardSessionId = session?.Id,
                 OrderId = order?.Id,
-                IdentifyString = $"{table?.Name ?? "Table " + tableId} ({now.ToLocalTime():yyyy-MM-dd HH:mm})"
+                IdentifyString = $"{table?.Name ?? "Table " + tableId} ({finalEndTime.ToLocalTime():yyyy-MM-dd HH:mm})"
             };
 
             // 1. Process Session
             if (session != null)
             {
-                var duration = now - session.StartTime;
+                // Verify Manual Start Time if provided
+                if (request.FinalStartTime.HasValue) 
+                {
+                    session.StartTime = request.FinalStartTime.Value;
+                }
+
+                var duration = finalEndTime - session.StartTime;
                 var timeAmount = Math.Ceiling(((decimal)duration.TotalHours * session.PricePerHour) / 1000) * 1000;
                 
-                session.EndTime = now;
+                session.EndTime = finalEndTime;
                 session.TotalAmount = timeAmount;
                 session.Status = "PAID";
 
@@ -196,7 +213,7 @@ public class BilliardController : ControllerBase
             {
                 order.Status = "PAID";
                 order.PaymentMethod = request.PaymentMethod;
-                order.PaymentAmount = request.PaymentAmount; // optional
+                order.PaymentAmount = request.PaymentAmount; 
                 
                 foreach (var item in order.Items)
                 {
@@ -221,7 +238,6 @@ public class BilliardController : ControllerBase
                 table.Status = "Empty";
                 table.IsOccupied = false;
                 table.CurrentOrderId = null;
-                // session guest name? we can clear it or leave it. 
                 table.GuestName = null;
             }
 
@@ -296,4 +312,6 @@ public class BilliardCheckoutRequest
 {
     public string PaymentMethod { get; set; } = "cash";
     public decimal? PaymentAmount { get; set; }
+    public DateTime? FinalStartTime { get; set; }
+    public DateTime? FinalEndTime { get; set; }
 }

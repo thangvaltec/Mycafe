@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyCafe.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251221113750_AddInvoices")]
-    partial class AddInvoices
+    [Migration("20260103022821_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -258,12 +258,12 @@ namespace MyCafe.Backend.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("OrderNumber")
+                    b.Property<int?>("OrderNumber")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("order_number");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderNumber"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int?>("OrderNumber"));
 
                     b.Property<decimal?>("PaymentAmount")
                         .HasColumnType("numeric")

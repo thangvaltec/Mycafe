@@ -88,7 +88,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         {
             var db = services.GetRequiredService<AppDbContext>();
             // db.Database.EnsureDeleted(); // RESET DB REQUESTED
-            db.Database.EnsureCreated();
+            // db.Database.Migrate(); // Manual migration via CLI to avoid conflicts
+            // db.Database.EnsureCreated();
             
             try 
             {

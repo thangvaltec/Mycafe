@@ -8,18 +8,53 @@ import { QRCodeSVG } from 'qrcode.react';
 
 interface CheckoutModalProps {
     order: Order;
-    table?: Table | { id: string, name: string };
+    table?: Table | { id: string, name: string, guestName?: string };
     onClose: () => void;
     onSuccess: () => void;
-    onProcessPayment?: (method: PaymentMethod, receivedAmount: number) => Promise<void>;
+    onProcessPayment?: (method: PaymentMethod, receivedAmount: number, finalStartTime?: string, finalEndTime?: string) => Promise<void>;
+    useOrderId?: boolean;
+    startTime?: string;
+    isBilliard?: boolean;
 }
 
-const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, onSuccess, useOrderId = false, onProcessPayment }) => {
+const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, onSuccess, useOrderId = false, onProcessPayment, startTime, isBilliard = false }) => {
     const [activeTab, setActiveTab] = useState<'cash' | 'transfer'>('cash');
     const [receivedAmountStr, setReceivedAmountStr] = useState<string>('');
     const receivedAmount = parseVND(receivedAmountStr);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showFullBill, setShowFullBill] = useState(false); // Mobile toggle
+    const [showFullBill, setShowFullBill] = useState(false);
+
+    // Time Adjustment State
+    // Default to order.createdAt as start time if not provided separately
+    const [adjustedStartTime, setAdjustedStartTime] = useState<string>(
+        startTime || (table && 'startTime' in table ? (table as any).startTime : order.createdAt)
+    );
+    const [adjustedEndTime, setAdjustedEndTime] = useState<string>(new Date().toISOString());
+    // Price Per Hour should be passed or inferred. For now, assume fixed or extract from first time item.
+    // Hack: Extract price from the existing time fee item if available, else default 20k
+    const timeItem = order.items.find(i => i.productId === 'billiard-fee');
+    const pricePerHour = timeItem ? (timeItem.price / (timeItem.quantity > 0 ? timeItem.quantity : 1)) : 20000; // Simplified estimation
+
+    // Recalculate Logic
+    const calculateNewTotal = () => {
+        if (!isBilliard) return order.totalAmount;
+
+        const start = new Date(adjustedStartTime).getTime();
+        const end = new Date(adjustedEndTime).getTime();
+        if (isNaN(start) || isNaN(end) || start >= end) return order.totalAmount;
+
+        const durationHours = (end - start) / (1000 * 60 * 60);
+        const newTimeFee = Math.ceil((durationHours * pricePerHour) / 1000) * 1000;
+
+        const otherItemsTotal = order.items
+            .filter(i => i.productId !== 'billiard-fee')
+            .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        return newTimeFee + otherItemsTotal;
+    };
+
+    const currentTotal = calculateNewTotal();
+
 
     const finalizePayment = async (method: PaymentMethod) => {
         if (isSubmitting) return;
@@ -27,15 +62,26 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
         const finalReceived = method === PaymentMethod.CASH ? receivedAmount : order.totalAmount;
 
         try {
-            if (onProcessPayment) {
-                await onProcessPayment(method, finalReceived);
+            if (isBilliard) {
+                if (onProcessPayment) {
+                    await onProcessPayment(method, finalReceived, adjustedStartTime, adjustedEndTime);
+                } else {
+                    await api.billiardCheckout(
+                        useOrderId ? Number(order.id) : Number(table?.id || order.tableId),
+                        method,
+                        finalReceived,
+                        adjustedStartTime,
+                        adjustedEndTime
+                    );
+                }
             } else {
-                await api.checkout(
-                    useOrderId ? order.id : (table?.id || order.tableId),
-                    method,
-                    finalReceived,
-                    useOrderId
-                );
+                // Service View / Regular Order Checkout
+                if (onProcessPayment) {
+                    await onProcessPayment(method, finalReceived);
+                } else {
+                    // Use correct API for regular orders
+                    await api.checkoutOrder(order.id, method, finalReceived);
+                }
             }
             onSuccess();
         } catch (err: any) {
@@ -56,6 +102,26 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
         ...commonDenominations.filter(d => d >= order.totalAmount || d > 10000) // Show all common notes, maybe filtered slightly?
     ].sort((a, b) => a - b).filter((v, i, a) => a.indexOf(v) === i); // Unique & Sorted
 
+    // Time Options Generator (00:00 - 23:45)
+    const TIME_OPTIONS = Array.from({ length: 96 }).map((_, i) => {
+        const h = Math.floor(i / 4);
+        const m = (i % 4) * 15;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    });
+
+    // Helper to get HH:mm from ISO
+    const getHHMM = (isoString: string) => {
+        const d = new Date(isoString);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+
+    // Helper to update Time part of ISO
+    const updateTimePart = (isoString: string, newTime: string) => {
+        const [h, m] = newTime.split(':').map(Number);
+        const d = new Date(isoString);
+        d.setHours(h, m, 0, 0);
+        return d.toISOString();
+    };
 
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-0 md:p-4 h-[100dvh]">
@@ -65,25 +131,32 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
             <div className="relative w-full md:max-w-[1000px] h-full md:h-[650px] bg-[#FAF9F6] md:rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col md:flex-row animate-slide-up ring-4 ring-white/50">
 
                 {/* Close Button */}
-                <button onClick={onClose} className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-[#4B3621] flex items-center justify-center transition-colors shadow-sm">
-                    <i className="fas fa-times text-lg"></i>
+                {/* Close Button - User requested clear "Đóng" button */}
+                <button onClick={onClose} className="absolute top-4 right-4 z-50 px-4 py-2 rounded-full bg-white/80 hover:bg-white text-[#4B3621] font-bold text-xs shadow-sm border border-gray-100 transition-all">
+                    Đóng <i className="fas fa-times ml-1"></i>
                 </button>
 
                 {/* LEFT COLUMN: THE BILL (Mobile: Collapsible Header) */}
                 <div className={`w-full md:w-[55%] bg-[#FAF9F6] flex flex-col border-b md:border-b-0 md:border-r border-[#D4A373]/10 relative transition-all duration-300 shrink-0 ${showFullBill ? 'max-h-[60%] shadow-xl z-20' : 'max-h-[100px] md:max-h-full'}`}>
 
                     {/* Header Summary (Clickable on Mobile) */}
-                    <div className="p-5 md:p-8 shrink-0 flex justify-between items-start cursor-pointer md:cursor-default active:bg-black/5 md:active:bg-transparent transition-colors" onClick={() => setShowFullBill(!showFullBill)}>
-                        <div className="flex-1">
+                    <div className="p-5 md:p-8 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center cursor-pointer md:cursor-default active:bg-black/5 md:active:bg-transparent transition-colors border-b border-[#D4A373]/10" onClick={() => setShowFullBill(!showFullBill)}>
+                        <div className="flex-1 mb-2 md:mb-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <p className="text-[10px] font-black text-[#C2A383] uppercase tracking-[0.2em]">Hóa đơn</p>
                                 <i className={`fas fa-chevron-down text-[#C2A383] text-xs md:hidden transition-transform ${showFullBill ? 'rotate-180' : ''}`}></i>
                             </div>
-                            <h2 className="text-2xl md:text-4xl font-black text-[#4B3621] tracking-tighter uppercase truncate pr-4">{table?.name || 'Khách'}</h2>
-                            <p className="text-[10px] md:text-sm font-bold text-gray-400">Order #{order.orderNumber || order.id.slice(-4)}</p>
+                            <h2 className="text-xl md:text-2xl font-black text-[#4B3621] tracking-tighter uppercase truncate pr-4">{table?.name || 'Khách Vãng Lai'}</h2>
+                            {/* Display Guest Name if available, otherwise just order info */}
+                            {(table as any)?.guestName && <p className="text-sm font-bold text-[#C2A383]">{(table as any).guestName}</p>}
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 mt-1">Order #{order.orderNumber || order.id.slice(-4)}</p>
                         </div>
-                        <div className="text-right flex flex-col justify-center h-full">
-                            <p className="text-xl md:text-3xl font-black text-[#4B3621] tracking-tight">{formatVND(order.totalAmount)}</p>
+
+                        {/* Center Total Amount as requested */}
+                        <div className="text-right md:text-center flex flex-col justify-center">
+                            <p className="text-[10px] uppercase text-gray-400 font-bold mb-1 md:hidden">Tổng cộng</p>
+                            <p className="text-3xl md:text-4xl font-black text-[#4B3621] tracking-tighter">{formatVND(currentTotal)}</p>
+                            {currentTotal !== order.totalAmount && <p className="text-[10px] text-gray-400 line-through">{formatVND(order.totalAmount)}</p>}
                         </div>
                     </div>
 
@@ -134,6 +207,39 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                             </>
                         )}
                     </div>
+                    {/* Time Sections Input - Simplified */}
+                    {isBilliard && (
+                        <div className="p-6 bg-white border-b border-gray-100 flex gap-4">
+                            <div className="flex-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Giờ bắt đầu</label>
+                                <div className="relative">
+                                    {/* Date part is implicitly handled by adjustedStartTime's initial value */}
+                                    <select
+                                        value={getHHMM(adjustedStartTime)}
+                                        onChange={e => setAdjustedStartTime(updateTimePart(adjustedStartTime, e.target.value))}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs font-bold text-[#4B3621] appearance-none"
+                                    >
+                                        {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                    <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Giờ kết thúc</label>
+                                <div className="relative">
+                                    {/* Date part is implicitly handled by adjustedEndTime's initial value */}
+                                    <select
+                                        value={getHHMM(adjustedEndTime)}
+                                        onChange={e => setAdjustedEndTime(updateTimePart(adjustedEndTime, e.target.value))}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs font-bold text-[#4B3621] appearance-none"
+                                    >
+                                        {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                    <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* RIGHT COLUMN: PAYMENT ACTIONS */}
@@ -229,7 +335,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                             </div>
                             <div className="text-center">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Số tiền cần chuyển</p>
-                                <p className="text-4xl font-black text-[#4B3621] tracking-tighter">{formatVND(order.totalAmount)}</p>
+                                <p className="text-4xl font-black text-[#4B3621] tracking-tighter">{formatVND(currentTotal)}</p>
                             </div>
                         </div>
                     </div>
@@ -239,7 +345,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                     <div className="p-5 md:p-8 pt-4 mt-auto shrink-0 bg-white border-t border-gray-50 pb-12 md:pb-8">
                         <button
                             onClick={() => finalizePayment(activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER)}
-                            disabled={isSubmitting || (activeTab === 'cash' && receivedAmount < order.totalAmount)}
+                            disabled={isSubmitting || (activeTab === 'cash' && receivedAmount < currentTotal)}
                             className={`w-full py-5 rounded-[20px] font-black text-sm uppercase tracking-[0.2em] shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-3
                                 ${activeTab === 'cash'
                                     ? 'bg-[#4B3621] text-white hover:bg-[#3E2C1B] disabled:bg-gray-100 disabled:text-gray-300 disabled:shadow-none'
