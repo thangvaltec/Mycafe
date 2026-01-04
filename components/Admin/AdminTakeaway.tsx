@@ -47,7 +47,7 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, tables, onUpdateO
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
           <div>
             <h3 className="text-3xl font-black uppercase tracking-tighter mb-2 italic">Khách Mang Về</h3>
-            <p className="text-emerald-100 font-bold text-sm max-w-sm">Hệ thống ghi món và thanh toán nhanh chóng cho khách không ngồi tại quán.</p>
+            {/* <p className="text-emerald-100 font-bold text-sm max-w-sm">Hệ thống ghi món và thanh toán nhanh chóng cho khách không ngồi tại quán.</p> */}
             {!takeawayTable && <p className="text-yellow-300 text-xs mt-2 font-bold">⚠️ Chưa có bàn "Mang về" trong hệ thống</p>}
           </div>
           <button
@@ -68,14 +68,22 @@ const AdminTakeaway: React.FC<AdminTakeawayProps> = ({ orders, tables, onUpdateO
               <h4 className="text-2xl font-black text-[#4B3621]">Đang chờ thanh toán</h4>
               <p className="text-sm text-gray-400 font-bold mt-1">Mã hóa đơn: #{takeawayOrder.id.slice(-4)}</p>
             </div>
-            <div className="flex items-center gap-10">
-              <div className="text-right">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tổng tiền</p>
-                <p className="text-4xl font-black text-emerald-600 tracking-tighter">{formatVND(takeawayOrder.totalAmount)}đ</p>
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-10 w-full md:w-auto">
+              <div className="flex justify-between md:block w-full md:w-auto items-center gap-4">
+                <div className="text-left md:text-right">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tổng tiền</p>
+                  <p className="text-2xl md:text-3xl font-black text-emerald-600 tracking-tighter">{formatVND(takeawayOrder.totalAmount)}đ</p>
+                </div>
+                <button
+                  onClick={startCheckout}
+                  className="md:hidden bg-[#4B3621] text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                >
+                  Thanh toán
+                </button>
               </div>
               <button
                 onClick={startCheckout}
-                className="bg-[#4B3621] text-white px-12 py-6 rounded-[32px] font-black text-lg shadow-2xl active:scale-95 transition-all"
+                className="hidden md:block bg-[#4B3621] text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all hover:bg-[#3E2C1B]"
               >
                 THANH TOÁN NGAY
               </button>

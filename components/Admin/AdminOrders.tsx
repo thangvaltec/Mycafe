@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Order, OrderStatus, Table, PaymentMethod } from '../../types';
 import CheckoutModal from './CheckoutModal';
 import { formatVND } from '../../utils/format';
+import { api } from '../../services/api';
 
 interface AdminOrdersProps {
   orders: Order[];
@@ -83,22 +84,56 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                       <i className="fas fa-list-ul text-gray-200 text-xs"></i>
                     </div>
                     {order.items.map((item, i) => (
-                      <div key={i} className="flex justify-between items-center p-2.5 rounded-2xl hover:bg-orange-50/50 transition-colors group/item border border-transparent hover:border-orange-100">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-8 h-8 rounded-xl bg-white text-[#4B3621] font-black text-xs flex items-center justify-center border border-gray-100 shadow-sm shrink-0 group-hover/item:border-orange-200 group-hover/item:text-orange-700">
-                            x{item.quantity}
-                          </div>
-                          <span className="text-xs font-bold text-gray-700 truncate group-hover/item:text-[#4B3621] leading-tight">{item.productName}</span>
+                      <div key={i} className="flex justify-between items-center p-2 rounded-2xl hover:bg-orange-50/50 transition-colors group/item border border-transparent hover:border-orange-100">
+                        <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
+                          <span className="text-xs font-bold text-gray-700 truncate group-hover/item:text-[#4B3621] leading-tight flex-1" title={item.productName}>{item.productName}</span>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Xóa món "${item.productName}"?`)) onDeleteOrderItem(String(item.id), order.id);
-                          }}
-                          className="ml-2 px-3 py-2 bg-white text-red-500 rounded-xl font-black text-[9px] uppercase tracking-wider border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all shadow-sm whitespace-nowrap flex items-center gap-1.5 opacity-60 hover:opacity-100 group-hover/item:opacity-100"
-                        >
-                          <i className="fas fa-trash-alt"></i> XÓA
-                        </button>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-0.5 shadow-sm">
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (item.quantity <= 1) {
+                                  if (window.confirm(`Bạn có chắc muốn xóa món "${item.productName}" không?`)) onDeleteOrderItem(String(item.id), order.id);
+                                  return;
+                                }
+                                try {
+                                  const updated = await api.updateOrderItem(order.id, String(item.id), item.quantity - 1);
+                                  onUpdateOrder(updated);
+                                } catch (err) { alert('Lỗi: ' + err); }
+                              }}
+                              className="w-6 h-6 rounded-md bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors flex items-center justify-center active:scale-90"
+                            >
+                              <i className="fas fa-minus text-[8px]"></i>
+                            </button>
+
+                            <span className="w-5 text-center text-[10px] font-black text-[#4B3621]">{item.quantity}</span>
+
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const updated = await api.updateOrderItem(order.id, String(item.id), item.quantity + 1);
+                                  onUpdateOrder(updated);
+                                } catch (err) { alert('Lỗi: ' + err); }
+                              }}
+                              className="w-6 h-6 rounded-md bg-[#4B3621] text-white hover:bg-[#C2A383] transition-colors flex items-center justify-center active:scale-90 shadow-sm"
+                            >
+                              <i className="fas fa-plus text-[8px]"></i>
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Bạn có chắc muốn xóa món "${item.productName}" không?`)) onDeleteOrderItem(String(item.id), order.id);
+                            }}
+                            className="px-2 py-1.5 bg-white text-red-500 rounded-lg font-black text-[8px] uppercase tracking-wider border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all shadow-sm whitespace-nowrap flex items-center gap-1 opacity-60 hover:opacity-100 group-hover/item:opacity-100"
+                          >
+                            <i className="fas fa-trash-alt"></i> XÓA
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -116,7 +151,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
 
       <section>
         <div className="flex items-center gap-3 mb-6">
-          <h3 className="text-xl font-black text-gray-400 uppercase tracking-tighter">Lịch sử hôm nay</h3>
+          <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter">Lịch sử hôm nay</h3>
           <p className="text-[9px] font-bold text-gray-300 uppercase italic">Nhấn vào hàng để xem chi tiết</p>
         </div>
 
@@ -125,11 +160,10 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#FAF9F6] border-b border-gray-50">
-                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap w-16">STT</th>
-                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Thời gian</th>
-                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Bàn / Khách</th>
-                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap text-center">Thanh toán</th>
-                  <th className="px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right whitespace-nowrap">Tổng tiền</th>
+                  <th className="px-2 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Thời gian</th>
+                  <th className="px-2 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Bàn</th>
+                  <th className="px-2 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap text-center">Thanh toán</th>
+                  <th className="px-2 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right whitespace-nowrap">Tổng tiền</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -138,20 +172,19 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   const isTakeaway = table?.alias === 'Takeaway' || table?.tableNumber === 'MV';
                   return (
                     <tr key={order.id} onClick={() => setViewingHistoryOrder(order)} className="hover:bg-[#C2A383]/5 transition-colors cursor-pointer group">
-                      <td className="px-4 py-4 font-black text-[#C2A383] text-[10px] group-hover:underline">#{order.orderNumber}</td>
-                      <td className="px-4 py-4 text-xs font-bold text-gray-400 whitespace-nowrap">{new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td className="px-4 py-4">
+                      <td className="px-2 md:px-4 py-4 text-xs font-bold text-gray-400 whitespace-nowrap">{new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="px-2 md:px-4 py-4">
                         <div className="flex flex-col">
-                          <span className="font-black text-gray-800 text-xs">{isTakeaway ? 'MANG VỀ' : (table?.name || 'Bàn ' + order.tableId)}</span>
-                          <span className="text-[10px] text-gray-400 font-bold">{isTakeaway ? 'Khách lẻ' : (table?.guestName === 'Khách vãng lai' ? '' : (table?.guestName || ''))}</span>
+                          <span className="font-black text-gray-800 text-xs whitespace-nowrap">{isTakeaway ? 'MANG VỀ' : (table?.name || 'Bàn ' + order.tableId)}</span>
+                          <span className="text-[10px] text-gray-400 font-bold truncate max-w-[80px] md:max-w-none">{isTakeaway ? 'Khách lẻ' : (table?.guestName === 'Khách vãng lai' ? '' : (table?.guestName || ''))}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-2 md:px-4 py-4 text-center">
                         <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md whitespace-nowrap ${order.paymentMethod === PaymentMethod.CASH ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                           {getMethodLabel(order.paymentMethod)}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-right font-black text-[#4B3621] whitespace-nowrap">{formatVND(order.totalAmount)}đ</td>
+                      <td className="px-2 md:px-4 py-4 text-right font-black text-[#4B3621] whitespace-nowrap text-xs md:text-sm">{formatVND(order.totalAmount)}đ</td>
                     </tr>
                   );
                 })}
@@ -211,19 +244,19 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                 </div>
               </div>
 
-              <div className="bg-[#FAF9F6] p-8 rounded-[40px] space-y-6 border border-gray-100">
-                <div className="flex justify-between items-center text-sm font-bold text-gray-400 uppercase tracking-widest">
-                  <span>Tổng hóa đơn:</span>
-                  <span className="text-[#4B3621] font-black text-lg">{formatVND(viewingHistoryOrder.totalAmount)}đ</span>
+              <div className="bg-[#FAF9F6] p-6 md:p-8 rounded-[40px] space-y-4 md:space-y-6 border border-gray-100">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 md:gap-0">
+                  <span className="text-[10px] md:text-sm font-bold text-gray-400 uppercase tracking-widest">Tổng hóa đơn:</span>
+                  <span className="text-[#4B3621] font-black text-2xl md:text-lg">{formatVND(viewingHistoryOrder.totalAmount)}đ</span>
                 </div>
                 <div className="h-px w-full border-b border-dashed border-gray-200"></div>
-                <div className="flex justify-between items-center text-sm font-bold text-gray-400 uppercase tracking-widest">
-                  <span>Khách đã đưa ({getMethodLabel(viewingHistoryOrder.paymentMethod)}):</span>
-                  <span className="text-[#4B3621] font-black text-lg">{formatVND(viewingHistoryOrder.paymentAmount || 0)}đ</span>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 md:gap-0">
+                  <span className="text-[10px] md:text-sm font-bold text-gray-400 uppercase tracking-widest">Khách đã đưa ({getMethodLabel(viewingHistoryOrder.paymentMethod)}):</span>
+                  <span className="text-[#4B3621] font-black text-2xl md:text-lg">{formatVND(viewingHistoryOrder.paymentAmount || 0)}đ</span>
                 </div>
-                <div className="flex justify-between items-center text-sm font-bold text-gray-400 uppercase tracking-widest">
-                  <span>Tiền thừa trả khách:</span>
-                  <span className="text-emerald-600 font-black text-2xl">{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 md:gap-0">
+                  <span className="text-[10px] md:text-sm font-bold text-gray-400 uppercase tracking-widest">Tiền thừa trả khách:</span>
+                  <span className="text-emerald-600 font-black text-3xl md:text-2xl">{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
                 </div>
               </div>
             </div>

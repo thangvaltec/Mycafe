@@ -98,8 +98,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
     // They might also want to tap "20k" if bill is 15k.
     // Let's just show all common ones that are "reasonable" or just all of them + Exact Amount.
     const quickAmounts = [
-        order.totalAmount, // "Đúng số tiền"
-        ...commonDenominations.filter(d => d >= order.totalAmount || d > 10000) // Show all common notes, maybe filtered slightly?
+        currentTotal, // "Đúng số tiền"
+        ...commonDenominations.filter(d => d >= currentTotal) // USER REQUEST: Only show amounts >= total
     ].sort((a, b) => a - b).filter((v, i, a) => a.indexOf(v) === i); // Unique & Sorted
 
     // Time Options Generator (00:00 - 23:45)

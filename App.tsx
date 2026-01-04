@@ -75,9 +75,9 @@ const App: React.FC = () => {
       const res = await api.login(username, password);
       if (res.token) {
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', res.role === 'ADMIN' ? 'ADMIN' : 'CUSTOMER');
+        localStorage.setItem('userRole', res.role);
         setIsLoggedIn(true);
-        if (res.role === 'ADMIN') setRole('ADMIN');
+        setRole(res.role as UserRole);
       } else {
         setLoginError('Không nhận được token xác thực.');
       }
@@ -244,8 +244,9 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-[1440px] mx-auto min-h-screen">
-      {role === 'ADMIN' ? (
+      {role === 'ADMIN' || role === 'STAFF' ? (
         <AdminView
+          role={role}
           tables={tables}
           products={products}
           categories={categories}
@@ -277,7 +278,7 @@ const App: React.FC = () => {
             table={currentCustomerTable}
             products={products}
             categories={categories}
-            activeOrder={orders.find(o => String(o.tableId) === String(selectedTableId) && (o.status !== 'PAID' && o.status !== OrderStatus.PAID))}
+            activeOrder={orders.find(o => String(o.tableId) === String(selectedTableId) && o.status !== OrderStatus.PAID)}
             onPlaceOrder={(items) => handlePlaceOrder(selectedTableId, items)}
             // Pass admin switch if logged in as admin
             onSwitchToAdmin={isLoggedIn && localStorage.getItem('userRole') === 'ADMIN' ? () => setRole('ADMIN') : undefined}

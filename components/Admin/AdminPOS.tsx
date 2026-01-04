@@ -248,7 +248,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
 
             <div className="bg-[#FAF9F6] p-8 rounded-[40px] my-8 border-2 border-dashed border-[#C2A383]/30 flex justify-center shadow-inner">
               <QRCodeSVG
-                value={`http://192.168.0.30:3000/?tableId=${qrTable.id}`}
+                value={`${window.location.protocol}//${window.location.host}/?tableId=${qrTable.id}`}
                 size={200}
                 level="H"
                 includeMargin={true}
@@ -257,7 +257,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
 
             <div className="space-y-4">
               <button onClick={() => window.print()} className="w-full bg-[#4B3621] text-white py-5 rounded-3xl font-black text-xs uppercase shadow-xl active:scale-95 transition-transform"><i className="fas fa-print mr-2"></i> IN MÃ QR</button>
-              <p className="text-[9px] text-gray-400 font-medium italic">URL: http://192.168.0.30:3000/?tableId={qrTable.id}</p>
+              <p className="text-[9px] text-gray-400 font-medium italic">URL: {window.location.host}/?tableId={qrTable.id}</p>
             </div>
           </div>
         </div>

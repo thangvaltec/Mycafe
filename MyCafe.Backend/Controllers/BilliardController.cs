@@ -85,7 +85,7 @@ public class BilliardController : ControllerBase
 
         var order = await _context.Orders
             .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.TableId == tableId && (o.Status == "NEW" || o.Status == "PROCESSING" || o.Status == "COMPLETED"));
+            .FirstOrDefaultAsync(o => o.TableId == tableId && o.Status != "PAID" && o.Status != "CANCELLED");
 
         // If no session and no order, return 404
         if (session == null && order == null) return NotFound("Không có hóa đơn active cho bàn này");
@@ -157,7 +157,7 @@ public class BilliardController : ControllerBase
 
             var order = await _context.Orders
                 .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.TableId == tableId && (o.Status == "NEW" || o.Status == "PROCESSING" || o.Status == "COMPLETED"));
+                .FirstOrDefaultAsync(o => o.TableId == tableId && o.Status != "PAID" && o.Status != "CANCELLED");
             Console.WriteLine($"[Checkout] Found Order: {order?.Id} (Status: {order?.Status})");
             
             var table = await _context.Tables.FirstOrDefaultAsync(t => t.Id == tableId);
@@ -182,7 +182,10 @@ public class BilliardController : ControllerBase
                 IdentifyString = $"{table?.Name ?? "Table " + tableId} ({finalEndTime.ToLocalTime():yyyy-MM-dd HH:mm})"
             };
 
-            // 1. Process Session
+            // 1. Process Session & Time Fee
+            decimal timeAmount = 0;
+            string timeDescription = "Tiền giờ";
+            
             if (session != null)
             {
                 // Verify Manual Start Time if provided
@@ -192,47 +195,68 @@ public class BilliardController : ControllerBase
                 }
 
                 var duration = finalEndTime - session.StartTime;
-                var timeAmount = Math.Ceiling(((decimal)duration.TotalHours * session.PricePerHour) / 1000) * 1000;
+                timeAmount = Math.Ceiling(((decimal)duration.TotalHours * session.PricePerHour) / 1000) * 1000;
+                timeDescription = $"Tiền giờ ({duration.Hours}h {duration.Minutes}m)";
                 
                 session.EndTime = finalEndTime;
                 session.TotalAmount = timeAmount;
-                session.Status = "PAID";
+                session.Status = "PAID"; // Mark session as closed
+            }
 
+            // 2. Ensure Order Exists for Reporting (Unified Transaction)
+            if (order == null)
+            {
+                order = new Order
+                {
+                    Id = Guid.NewGuid(),
+                    TableId = tableId,
+                    Status = "NEW", // Will be set to PAID shortly
+                    CreatedAt = finalEndTime,
+                    Items = new List<OrderItem>()
+                };
+                _context.Orders.Add(order);
+            }
+
+            // 3. Add Time Fee to Order Items
+            if (timeAmount > 0)
+            {
+                var timeItem = new OrderItem
+                {
+                    OrderId = order.Id,
+                    ProductName = timeDescription,
+                    Price = timeAmount,
+                    Quantity = 1
+                };
+                order.Items.Add(timeItem);
+                _context.OrderItems.Add(timeItem);
+            }
+
+            // 4. Update Order Status & Total
+            order.Status = "PAID";
+            order.PaymentMethod = request.PaymentMethod;
+            order.PaymentAmount = request.PaymentAmount;
+            order.TotalAmount = order.Items.Sum(i => i.Price * i.Quantity); // Re-sum to include time fee
+
+            // 5. Create Invoice (Mirroring the Unified Order)
+            invoice.OrderId = order.Id;
+            invoice.TotalAmount = order.TotalAmount; // Sync with Order
+            
+            // Add items to Invoice for historical record (Invoice table)
+            foreach (var item in order.Items)
+            {
                 invoice.Items.Add(new InvoiceItem
                 {
-                    Name = $"Tiền giờ ({duration.Hours}h {duration.Minutes}m)",
-                    Quantity = 1,
-                    UnitPrice = timeAmount,
-                    TotalPrice = timeAmount,
-                    Type = "TIME_FEE"
+                    Name = item.ProductName ?? "Item",
+                    Quantity = item.Quantity,
+                    UnitPrice = item.Price,
+                    TotalPrice = item.Price * item.Quantity,
+                    Type = item.ProductName.Contains("Tiền giờ") ? "TIME_FEE" : "MENU_ITEM"
                 });
             }
 
-            // 2. Process Order
-            if (order != null)
-            {
-                order.Status = "PAID";
-                order.PaymentMethod = request.PaymentMethod;
-                order.PaymentAmount = request.PaymentAmount; 
-                
-                foreach (var item in order.Items)
-                {
-                    invoice.Items.Add(new InvoiceItem
-                    {
-                        Name = item.ProductName ?? "Item",
-                        Quantity = item.Quantity,
-                        UnitPrice = item.Price,
-                        TotalPrice = item.Price * item.Quantity,
-                        Type = "MENU_ITEM"
-                    });
-                }
-            }
-
-            // 3. Finalize Invoice
-            invoice.TotalAmount = invoice.Items.Sum(i => i.TotalPrice);
             _context.Invoices.Add(invoice);
 
-            // 4. Update Table Status
+            // 6. Update Table Status
             if (table != null)
             {
                 table.Status = "Empty";

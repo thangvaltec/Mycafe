@@ -59,3 +59,8 @@ appsettings.Local.json
 *.db
 *.db-shm
 *.db-wal
+
+# --- Local Scripts & Logs ---
+MyCafe.Backend/verify_qr_flow.ps1
+MyCafe.Backend/seed_render.ps1
+MyCafe.Backend/build_log.txt

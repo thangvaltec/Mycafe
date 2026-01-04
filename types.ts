@@ -29,6 +29,7 @@ export interface Product {
 }
 
 export interface OrderItem {
+  id?: string;
   productId: string;
   productName: string;
   price: number;
@@ -78,4 +79,4 @@ export interface Expense {
   date: string;
 }
 
-export type UserRole = 'CUSTOMER' | 'ADMIN';
+export type UserRole = 'CUSTOMER' | 'ADMIN' | 'STAFF';

@@ -1,6 +1,6 @@
 import { Category, Expense, Product, Order, PaymentMethod, Table, BilliardSession } from '../types';
 
-const API_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.151.50:5238/api'; // Use env var for Prod, fallback to IP for Dev
+const API_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
 
 // --- Helper ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
@@ -151,6 +151,11 @@ export const api = {
     }),
     deleteOrderItem: (orderId: string, itemId: string) => fetchApi(`/order/${orderId}/items/${itemId}`, {
         method: 'DELETE',
+    }),
+    updateOrderItem: (orderId: string, itemId: string, quantity: number) => fetchApi<Order>(`/order/${orderId}/items/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity })
     }),
     updateExpense: (expense: Expense) => fetchApi<Expense>(`/report/expenses/${expense.id}`, {
         method: 'PUT',

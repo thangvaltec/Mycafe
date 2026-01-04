@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Table, Product, Order, Category, Expense, OrderItem, OrderStatus } from '../types';
+import { Table, Product, Order, Category, Expense, OrderItem, OrderStatus, UserRole } from '../types';
 import AdminPOS from './Admin/AdminPOS';
 import AdminOrders from './Admin/AdminOrders';
 import AdminMenu from './Admin/AdminMenu';
@@ -36,13 +36,14 @@ interface AdminViewProps {
   onDeleteCategory: (id: string) => void;
   onLogout: () => void;
   onSwitchMode: () => void; // NEW
+  role: UserRole;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({
   tables, products, categories, orders, expenses,
   onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateTable, onDeleteTable, onUpdateOrder, onAddExpense, onUpdateExpense, onDeleteExpense, onPlaceOrder, onAddTable,
   onSetOrders, onSetExpenses, onSetTables, onAddCategory, onUpdateCategory, onDeleteCategory,
-  onLogout, onSwitchMode
+  onLogout, onSwitchMode, role
 }) => {
   const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'expenses' | 'orders' | 'menu' | 'report' | 'billiard'>('pos');
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
@@ -127,7 +128,7 @@ const AdminView: React.FC<AdminViewProps> = ({
             { id: 'menu', icon: 'fa-mug-hot', label: 'Thực đơn' },
             { id: 'expenses', icon: 'fa-wallet', label: 'Chi phí' },
             { id: 'report', icon: 'fa-chart-pie', label: 'Báo cáo' }
-          ].map(item => (
+          ].filter(item => role !== 'STAFF' || (item.id !== 'expenses' && item.id !== 'report')).map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex-1 lg:flex-none p-2 lg:p-4 rounded-xl lg:rounded-2xl flex flex-col lg:flex-row items-center gap-1 lg:gap-4 transition-all ${activeTab === item.id ? 'bg-[#C2A383] text-[#4B3621] font-bold shadow-lg' : 'text-gray-400 hover:text-white'}`}>
               <i className={`fas ${item.icon} text-lg lg:text-xl`}></i>
               <span className="text-[10px] lg:text-sm font-black whitespace-nowrap">{item.label}</span>
@@ -192,7 +193,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           </div>
         </header>
 
-        <div className={`flex-1 bg-[#F8F7F3] ${activeTab === 'report' ? 'overflow-hidden p-2 lg:p-4 flex flex-col' : 'overflow-y-auto p-4 lg:p-10 admin-scroll'}`}>
+        <div className="flex-1 bg-[#F8F7F3] overflow-y-auto p-4 lg:p-10 admin-scroll">
           {activeTab === 'pos' && (
             <AdminPOS
               tables={tables}

@@ -3,6 +3,7 @@ import { BilliardSession, PaymentMethod, Order, OrderItem, OrderStatus, Table } 
 import { formatVND, parseVND } from '../../utils/format';
 import { api } from '../../services/api';
 import CheckoutModal from './CheckoutModal';
+import BilliardCheckoutModal from './BilliardCheckoutModal';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface AdminBilliardProps {
@@ -475,22 +476,22 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
 
             {/* Checkout Modal Unified */}
             {checkoutBill && checkoutSession && (
-                <CheckoutModal
+                <BilliardCheckoutModal
                     order={getCheckoutOrder()!}
                     table={{
                         id: String(checkoutSession.tableId),
                         name: tables.find(t => t.id === String(checkoutSession.tableId))?.name || `Bàn ${checkoutBill.tableId}`,
                         guestName: checkoutSession.guestName,
-                        startTime: checkoutSession.startTime // Propagate original start time
+                        startTime: checkoutSession.startTime
                     }}
-                    isBilliard={true}
+                    pricePerHour={checkoutSession.pricePerHour}
+                    startTime={checkoutSession.startTime}
                     onClose={() => { setCheckoutSession(null); setCheckoutBill(null); }}
                     onSuccess={() => {
                         setCheckoutSession(null);
                         setCheckoutBill(null);
                         fetchData();
                     }}
-                    onProcessPayment={handleProcessPayment}
                 />
             )}
         </div>

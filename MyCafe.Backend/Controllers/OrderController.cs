@@ -164,6 +164,38 @@ public class OrderController : ControllerBase
 
         return Ok(order);
     }
+    [HttpPut("{orderId}/items/{itemId}")]
+    public async Task<IActionResult> UpdateOrderItem(Guid orderId, Guid itemId, [FromBody] UpdateOrderItemRequest request)
+    {
+        var order = await _context.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId);
+        if (order == null) return NotFound("Order not found");
+
+        var item = order.Items.FirstOrDefault(i => i.Id == itemId);
+        if (item == null) return NotFound("Item not found in order");
+
+        if (request.Quantity <= 0)
+        {
+            // If quantity <= 0, remove item
+            order.Items.Remove(item);
+            _context.OrderItems.Remove(item);
+        }
+        else
+        {
+            item.Quantity = request.Quantity;
+        }
+
+        // Recalculate total
+        order.TotalAmount = order.Items.Sum(i => i.Price * i.Quantity);
+        
+        await _context.SaveChangesAsync();
+
+        return Ok(order);
+    }
+}
+
+public class UpdateOrderItemRequest
+{
+    public int Quantity { get; set; }
 }
 
 public class PlaceOrderRequest
