@@ -98,6 +98,13 @@ public class MenuController : ControllerBase
     {
         if (id != item.Id) return BadRequest("Lỗi dữ liệu: ID không khớp");
 
+        // Check for old image clean up
+        var existing = await _context.MenuItems.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (existing != null && !string.IsNullOrEmpty(existing.ImagePath) && existing.ImagePath != item.ImagePath)
+        {
+             DeleteImageFile(existing.ImagePath); // Deletes from Cloudinary
+        }
+
         _context.Entry(item).State = EntityState.Modified;
         await _context.SaveChangesAsync();
         return Ok(item);
@@ -120,12 +127,30 @@ public class MenuController : ControllerBase
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null) return NotFound();
 
+        if (!string.IsNullOrEmpty(item.ImagePath)) 
+        {
+            DeleteImageFile(item.ImagePath);
+        }
+
         _context.MenuItems.Remove(item);
         await _context.SaveChangesAsync();
         return Ok();
     }
 
-    // --- Image Upload ---
+    // --- Cloudinary Integration ---
+
+    private CloudinaryDotNet.Cloudinary GetCloudinary()
+    {
+        var cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME");
+        var apiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
+        var apiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
+
+        if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+            throw new Exception("Cloudinary config missing");
+
+        var account = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
+        return new CloudinaryDotNet.Cloudinary(account);
+    }
 
     [HttpPost("upload")]
     public async Task<IActionResult> UploadImage(IFormFile file)
@@ -133,29 +158,47 @@ public class MenuController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("Chưa chọn tệp tin nào");
 
-        // Validate extension
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!allowedExtensions.Contains(extension))
-            return BadRequest("Định dạng tệp không hợp lệ");
-
-        // Generate unique filename
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "foods");
-        
-        // Ensure directory exists
-        if (!Directory.Exists(uploadPath))
-            Directory.CreateDirectory(uploadPath);
-
-        var filePath = Path.Combine(uploadPath, fileName);
-
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        try 
         {
-            await file.CopyToAsync(stream);
+            var cloudinary = GetCloudinary();
+            var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
+            {
+                File = new CloudinaryDotNet.Actions.FileDescription(file.FileName, file.OpenReadStream()),
+                Folder = "mycafe_emenu"
+            };
+            var uploadResult = await cloudinary.UploadAsync(uploadParams);
+            return Ok(new { path = uploadResult.SecureUrl.ToString() });
         }
+        catch (Exception ex)
+        {
+            return BadRequest($"Lỗi upload Cloudinary: {ex.Message}");
+        }
+    }
 
-        // Return relative path
-        var relativePath = $"/uploads/foods/{fileName}";
-        return Ok(new { path = relativePath });
+    // --- Helper to delete from Cloudinary ---
+    private void DeleteImageFile(string imageUrl)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(imageUrl) || !imageUrl.Contains("cloudinary.com")) return;
+
+            // Extract Public ID: .../mycafe_emenu/file.jpg -> mycafe_emenu/file
+            var uri = new Uri(imageUrl);
+            var path = uri.AbsolutePath; // /v123/mycafe_emenu/file.jpg
+            var startIndex = path.IndexOf("mycafe_emenu");
+            if (startIndex == -1) return;
+
+            var publicIdWithExt = path.Substring(startIndex); // mycafe_emenu/file.jpg
+            var publicId = Path.ChangeExtension(publicIdWithExt, null); // mycafe_emenu/file
+
+            var cloudinary = GetCloudinary();
+            var deletionParams = new CloudinaryDotNet.Actions.DeletionParams(publicId);
+            cloudinary.Destroy(deletionParams);
+            Console.WriteLine($"[Cloudinary] Deleted: {publicId}");
+        }
+        catch (Exception ex)
+        {
+             Console.WriteLine($"[Cloudinary Error] Could not delete {imageUrl}: {ex.Message}");
+        }
     }
 }
