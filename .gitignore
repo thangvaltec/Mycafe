@@ -64,3 +64,11 @@ appsettings.Local.json
 MyCafe.Backend/verify_qr_flow.ps1
 MyCafe.Backend/seed_render.ps1
 MyCafe.Backend/build_log.txt
+MyCafe.Backend/build_error.txt
+MyCafe.Backend/build_log_en.txt
+*.log
+
+# --- User Uploads ---
+MyCafe.Backend/wwwroot/uploads/*
+!MyCafe.Backend/wwwroot/uploads/.gitkeep
+**/foods/
