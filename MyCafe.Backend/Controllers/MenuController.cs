@@ -98,6 +98,18 @@ public class MenuController : ControllerBase
     {
         if (id != item.Id) return BadRequest("Lỗi dữ liệu: ID không khớp");
 
+        // Fetch existing to check for image change
+        var existingItem = await _context.MenuItems.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (existingItem != null)
+        {
+            // If ImagePath changed and old one exists, delete old file
+            if (!string.IsNullOrEmpty(existingItem.ImagePath) && 
+                existingItem.ImagePath != item.ImagePath)
+            {
+                DeleteImageFile(existingItem.ImagePath);
+            }
+        }
+
         _context.Entry(item).State = EntityState.Modified;
         await _context.SaveChangesAsync();
         return Ok(item);
@@ -120,9 +132,39 @@ public class MenuController : ControllerBase
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null) return NotFound();
 
+        // Delete associated image
+        if (!string.IsNullOrEmpty(item.ImagePath))
+        {
+            DeleteImageFile(item.ImagePath);
+        }
+
         _context.MenuItems.Remove(item);
         await _context.SaveChangesAsync();
         return Ok();
+    }
+
+    // --- Helper to delete physical file ---
+    private void DeleteImageFile(string relativePath)
+    {
+        try
+        {
+            // Safety check: Only delete files in /uploads/
+            if (string.IsNullOrWhiteSpace(relativePath) || !relativePath.StartsWith("/uploads/")) return;
+
+            var webRootPath = _environment.WebRootPath;
+            // relativePath e.g. /uploads/foods/abc.jpg -> remove leading slash
+            var filePath = Path.Combine(webRootPath, relativePath.TrimStart('/'));
+
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+                Console.WriteLine($"[Image Cleanup] Deleted old file: {filePath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Image Cleanup Error] Could not delete {relativePath}: {ex.Message}");
+        }
     }
 
     // --- Image Upload ---

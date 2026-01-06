@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { Product, Category, Order, OrderItem, OrderStatus, Table, BilliardSession } from '../types';
-import { formatVND } from '../utils/format';
+import { formatVND, getImageUrl } from '../utils/format';
 import { api } from '../services/api';
 
 interface CustomerViewProps {
@@ -280,7 +280,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                 <div key={p.id} className="bg-white rounded-[32px] p-3 shadow-sm border border-gray-50 flex flex-col group transition-all active:scale-[0.98]">
                   <div className="aspect-[1.1/1] rounded-[24px] overflow-hidden bg-gray-50 mb-3.5 relative shadow-inner border border-gray-50">
                     <img
-                      src={p.imageUrl}
+                      src={getImageUrl(p.imageUrl)}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       alt={p.name}
                       loading="lazy"
@@ -345,7 +345,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                 return (
                   <div key={pid} className="flex justify-between items-center p-4 bg-white rounded-3xl border border-gray-100 shadow-sm">
                     <div className="flex items-center gap-4">
-                      <img src={p.imageUrl} className="w-14 h-14 rounded-2xl object-cover shadow-sm" alt="" />
+                      <img src={getImageUrl(p.imageUrl)} className="w-14 h-14 rounded-2xl object-cover shadow-sm" alt="" />
                       <div>
                         <p className="font-black text-[#4B3621] text-sm leading-tight mb-1">{p.name}</p>
                         <p className="text-xs text-[#C2A383] font-black tracking-tighter">{formatVND(p.price)}đ</p>

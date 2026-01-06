@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Product, Category } from '../../types';
-import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
+import { formatVND, handleMoneyInput, parseVND, getImageUrl } from '../../utils/format';
 import { api } from '../../services/api';
 
 interface AdminMenuProps {
@@ -116,7 +116,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
     setEditingCategory(null);
   };
 
-  const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
 
   const scrollToCategory = (id: string) => {
     const element = sectionRefs.current[id];
@@ -150,7 +150,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
 
       <div className="space-y-16">
         {categories.map(cat => (
-          <section key={cat.id} ref={el => sectionRefs.current[cat.id] = el} className="space-y-8 scroll-mt-6">
+          <section key={cat.id} ref={el => { sectionRefs.current[cat.id] = el; }} className="space-y-8 scroll-mt-6">
             <div className="flex items-center gap-6 px-2">
               <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter whitespace-nowrap flex items-center gap-3">
                 <span className="w-2 h-8 bg-[#C2A383] rounded-full"></span>{cat.name}
@@ -161,7 +161,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
               {products.filter(p => p.categoryId === cat.id).map(p => (
                 <div key={p.id} className="bg-white p-4 rounded-[32px] shadow-sm border border-gray-100 flex flex-col group hover:shadow-xl transition-all hover:-translate-y-1">
                   <div className="w-full aspect-square rounded-[24px] overflow-hidden shadow-inner border border-gray-50 relative mb-4">
-                    <img src={p.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                    <img src={getImageUrl(p.imageUrl)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                     {!p.isActive && (
                       <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center">
                         <span className="bg-red-500 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest shadow-lg transform -rotate-6 border border-white/20">Tạm ngưng</span>
@@ -210,7 +210,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
                 >
                   {editingItem?.imageUrl ? (
                     <>
-                      <img src={editingItem.imageUrl} className="w-full h-full object-cover" alt="Preview" />
+                      <img src={getImageUrl(editingItem.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase">
                         Đổi ảnh mới
                       </div>

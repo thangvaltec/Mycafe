@@ -13,3 +13,14 @@ export const handleMoneyInput = (value: string): string => {
   if (!numericValue) return '';
   return new Intl.NumberFormat('vi-VN').format(parseInt(numericValue));
 };
+
+export const getImageUrl = (path: string): string => {
+  if (!path) return '';
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+
+  // Get API URL from env or fallback common patterns
+  const apiUrl = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api';
+  const baseUrl = apiUrl.replace('/api', ''); // Remove /api suffix to get host
+
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
