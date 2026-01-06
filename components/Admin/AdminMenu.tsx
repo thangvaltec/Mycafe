@@ -116,7 +116,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
     setEditingCategory(null);
   };
 
-  const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
 
   const scrollToCategory = (id: string) => {
     const element = sectionRefs.current[id];
@@ -150,7 +150,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
 
       <div className="space-y-16">
         {categories.map(cat => (
-          <section key={cat.id} ref={el => sectionRefs.current[cat.id] = el} className="space-y-8 scroll-mt-6">
+          <section key={cat.id} ref={el => { sectionRefs.current[cat.id] = el; }} className="space-y-8 scroll-mt-6">
             <div className="flex items-center gap-6 px-2">
               <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter whitespace-nowrap flex items-center gap-3">
                 <span className="w-2 h-8 bg-[#C2A383] rounded-full"></span>{cat.name}

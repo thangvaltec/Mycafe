@@ -163,7 +163,7 @@ public class MenuController : ControllerBase
             var cloudinary = GetCloudinary();
             var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
             {
-                File = new CloudinaryDotNet.Actions.FileDescription(file.FileName, file.OpenReadStream()),
+                File = new CloudinaryDotNet.FileDescription(file.FileName, file.OpenReadStream()),
                 Folder = "mycafe_emenu"
             };
             var uploadResult = await cloudinary.UploadAsync(uploadParams);
