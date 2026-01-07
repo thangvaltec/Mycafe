@@ -1,6 +1,6 @@
 import { Category, Expense, Product, Order, PaymentMethod, Table, BilliardSession } from '../types';
 
-const API_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
+export const API_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
 
 // --- Helper ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {

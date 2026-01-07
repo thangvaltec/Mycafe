@@ -125,7 +125,13 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-6">
-        {tables.filter(t => !t.tableNumber.startsWith('BI-') && t.alias !== 'Bi-a').map(t => {
+        {tables.filter(t => {
+          // Safety check for missing/null fields
+          // Assuming tableNumber might be missing or different case if API issue
+          const tNum = t.tableNumber || '';
+          const tAlias = t.alias || '';
+          return !tNum.startsWith('BI-') && tAlias !== 'Bi-a';
+        }).map(t => {
           const tableOrder = orders.find(o => o.tableId === t.id && o.status !== OrderStatus.PAID);
           return (
             <div key={t.id} className={`relative px-5 py-5 rounded-[28px] border-2 transition-all flex flex-col justify-between min-h-[180px] shadow-sm ${t.isOccupied ? 'bg-[#4B3621] text-white border-transparent' : 'bg-white text-gray-400 border-gray-100 hover:border-[#C2A383]'} ${isEditMode && !t.isOccupied ? 'border-red-200 border-dashed bg-red-50/10' : ''}`}>
@@ -179,7 +185,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
                     </button>
                     <div className="col-span-1">
                       {isEditMode ? (
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteTable(t.id); }} className="w-full h-full bg-red-50 text-red-500 border border-red-100 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-all hover:bg-red-500 hover:text-white flex flex-col items-center justify-center gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); onDeleteTable(Number(t.id)); }} className="w-full h-full bg-red-50 text-red-500 border border-red-100 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-all hover:bg-red-500 hover:text-white flex flex-col items-center justify-center gap-1">
                           <i className="fas fa-trash text-xs"></i> XÓA BÀN
                         </button>
                       ) : (

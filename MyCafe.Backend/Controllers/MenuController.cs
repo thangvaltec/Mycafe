@@ -139,14 +139,21 @@ public class MenuController : ControllerBase
 
     // --- Cloudinary Integration ---
 
+    // --- Cloudinary Integration & Hybrid Storage ---
+
+    private bool IsCloudinaryConfigured()
+    {
+        var cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME");
+        var apiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
+        var apiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
+        return !string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret);
+    }
+
     private CloudinaryDotNet.Cloudinary GetCloudinary()
     {
         var cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME");
         var apiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
         var apiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
-
-        if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
-            throw new Exception("Cloudinary config missing");
 
         var account = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
         return new CloudinaryDotNet.Cloudinary(account);
@@ -160,45 +167,95 @@ public class MenuController : ControllerBase
 
         try 
         {
-            var cloudinary = GetCloudinary();
-            var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
+            // HYBRID LOGIC: Check env vars
+            if (IsCloudinaryConfigured())
             {
-                File = new CloudinaryDotNet.FileDescription(file.FileName, file.OpenReadStream()),
-                Folder = "mycafe_emenu"
-            };
-            var uploadResult = await cloudinary.UploadAsync(uploadParams);
-            return Ok(new { path = uploadResult.SecureUrl.ToString() });
+                // Use Cloudinary
+                var cloudinary = GetCloudinary();
+                var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
+                {
+                    File = new CloudinaryDotNet.FileDescription(file.FileName, file.OpenReadStream()),
+                    Folder = "mycafe_emenu"
+                };
+                var uploadResult = await cloudinary.UploadAsync(uploadParams);
+                return Ok(new { path = uploadResult.SecureUrl.ToString() });
+            }
+            else
+            {
+                // Fallback to Local Storage
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(extension))
+                    return BadRequest("Định dạng tệp không hợp lệ");
+
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "foods");
+                
+                if (!Directory.Exists(uploadPath))
+                    Directory.CreateDirectory(uploadPath);
+
+                var filePath = Path.Combine(uploadPath, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var relativePath = $"/uploads/foods/{fileName}";
+                return Ok(new { path = relativePath });
+            }
         }
         catch (Exception ex)
         {
-            return BadRequest($"Lỗi upload Cloudinary: {ex.Message}");
+            return BadRequest($"Lỗi upload: {ex.Message}");
         }
     }
 
-    // --- Helper to delete from Cloudinary ---
+    // --- Helper to delete image ---
     private void DeleteImageFile(string imageUrl)
     {
         try
         {
-            if (string.IsNullOrEmpty(imageUrl) || !imageUrl.Contains("cloudinary.com")) return;
+            if (string.IsNullOrEmpty(imageUrl)) return;
 
-            // Extract Public ID: .../mycafe_emenu/file.jpg -> mycafe_emenu/file
-            var uri = new Uri(imageUrl);
-            var path = uri.AbsolutePath; // /v123/mycafe_emenu/file.jpg
-            var startIndex = path.IndexOf("mycafe_emenu");
-            if (startIndex == -1) return;
+            // 1. Try Delete from Cloudinary
+            if (imageUrl.Contains("cloudinary.com") && IsCloudinaryConfigured())
+            {
+                var uri = new Uri(imageUrl);
+                var path = uri.AbsolutePath; 
+                var startIndex = path.IndexOf("mycafe_emenu");
+                if (startIndex != -1) 
+                {
+                    var publicIdWithExt = path.Substring(startIndex); 
+                    var publicId = Path.ChangeExtension(publicIdWithExt, null); 
 
-            var publicIdWithExt = path.Substring(startIndex); // mycafe_emenu/file.jpg
-            var publicId = Path.ChangeExtension(publicIdWithExt, null); // mycafe_emenu/file
+                    var cloudinary = GetCloudinary();
+                    var deletionParams = new CloudinaryDotNet.Actions.DeletionParams(publicId);
+                    cloudinary.Destroy(deletionParams);
+                    Console.WriteLine($"[Cloudinary] Deleted: {publicId}");
+                    return; 
+                }
+            }
 
-            var cloudinary = GetCloudinary();
-            var deletionParams = new CloudinaryDotNet.Actions.DeletionParams(publicId);
-            cloudinary.Destroy(deletionParams);
-            Console.WriteLine($"[Cloudinary] Deleted: {publicId}");
+            // 2. Try Delete Local File (if matches local pattern)
+            // Local path usually starts with /uploads/foods/...
+            if (imageUrl.StartsWith("/uploads"))
+            {
+                var webRootPath = _environment.WebRootPath;
+                // remove leading slash for Path.Combine if needed, but Path.Combine handles absolute/relative nuances. 
+                // Better: trim start slash
+                var relativePath = imageUrl.TrimStart('/'); 
+                var fullPath = Path.Combine(webRootPath, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+
+                if (System.IO.File.Exists(fullPath))
+                {
+                    System.IO.File.Delete(fullPath);
+                    Console.WriteLine($"[Local] Deleted file: {fullPath}");
+                }
+            }
         }
         catch (Exception ex)
         {
-             Console.WriteLine($"[Cloudinary Error] Could not delete {imageUrl}: {ex.Message}");
+             Console.WriteLine($"[Image Delete Error] {imageUrl}: {ex.Message}");
         }
     }
 }
