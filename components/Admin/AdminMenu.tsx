@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Product, Category } from '../../types';
 import { formatVND, handleMoneyInput, parseVND, getImageUrl } from '../../utils/format';
+import { compressImage } from '../../utils/compress';
 import { api } from '../../services/api';
 
 interface AdminMenuProps {
@@ -74,7 +75,9 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
 
     if (selectedFile) {
       try {
-        const res = await api.uploadImage(selectedFile);
+        showToast('Đang xử lý ảnh...', 'success'); // Inform user
+        const compressedFile = await compressImage(selectedFile);
+        const res = await api.uploadImage(compressedFile);
         imageUrl = res.path;
       } catch (err: any) {
         showToast('Tải ảnh thất bại: ' + (err.message || err), 'error');
