@@ -125,10 +125,8 @@ const App: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (confirm('Delete product?')) {
-      await api.deleteProduct(id);
-      loadData();
-    }
+    await api.deleteProduct(id);
+    loadData();
   };
 
   const handleUpdateTable = async (t: Table) => {
