@@ -49,7 +49,10 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
   const [currentOrderingTable, setCurrentOrderingTable] = useState<Table | { id: string, name: string, guestName?: string } | null>(null);
 
-  const revenue = orders.filter(o => o.status === OrderStatus.PAID).reduce((acc, b) => acc + b.totalAmount, 0);
+  const revenue = orders.filter(o => {
+    if (o.status !== OrderStatus.PAID) return false;
+    return new Date(o.createdAt).toDateString() === new Date().toDateString();
+  }).reduce((acc, b) => acc + b.totalAmount, 0);
 
   const handleOpenOrderView = (table: Table | { id: string, name: string, guestName?: string }) => {
     setCurrentOrderingTable(table);

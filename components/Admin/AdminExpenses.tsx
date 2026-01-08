@@ -17,6 +17,9 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ expenses, onAddExpense, o
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Filter expenses for TODAY only
+  const todaysExpenses = expenses.filter(e => new Date(e.date).toDateString() === new Date().toDateString());
+
   // Helper to open form (Edit or Add)
   const openForm = () => {
     // Scroll to top of the scrollable container or window to show the form
@@ -216,7 +219,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ expenses, onAddExpense, o
           <div className="flex-1">
             <p className="text-[10px] md:text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Tổng chi phí</p>
             <h2 className="text-2xl md:text-4xl font-black text-[#4B3621] tracking-tighter counter-value">
-              -{formatVND(expenses.reduce((a, b) => a + b.amount, 0))}
+              -{formatVND(todaysExpenses.reduce((a, b) => a + b.amount, 0))}
             </h2>
           </div>
         </div>
@@ -236,19 +239,19 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ expenses, onAddExpense, o
               <div className="w-2 h-8 rounded-full bg-[#4B3621]"></div>
               <h3 className="text-lg font-black text-[#4B3621] uppercase tracking-tighter">Lịch sử chi tiêu</h3>
             </div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">{expenses.length} Giao dịch</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">{todaysExpenses.length} Giao dịch</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 custom-scrollbar">
-            {expenses.length === 0 ? (
+            {todaysExpenses.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center opacity-40 space-y-4">
                 <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center">
                   <i className="fas fa-file-invoice text-4xl text-gray-300"></i>
                 </div>
-                <p className="text-xs font-black text-gray-300 uppercase tracking-widest">Chưa có dữ liệu</p>
+                <p className="text-xs font-black text-gray-300 uppercase tracking-widest">Chưa có dữ liệu hôm nay</p>
               </div>
             ) : (
-              expenses
+              todaysExpenses
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((ex) => (
                   <div key={ex.id} id={`expense-${ex.id}`} className={`group relative bg-white p-3 rounded-[20px] border border-gray-100 hover:border-[#C2A383] hover:shadow-md transition-all duration-300 flex items-center justify-between gap-3 ${editingId === ex.id ? 'ring-2 ring-[#C2A383] bg-orange-50/10' : ''}`}>

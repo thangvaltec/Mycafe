@@ -179,17 +179,17 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
       {/* 2. CHỌN NHANH DANH MỤC (SẼ TRÔI ĐI KHI CUỘN) */}
       <section className="px-4 mt-6">
-        <div className="bg-white p-6 rounded-[32px] shadow-sm border border-[#C2A383]/10">
+        <div className="bg-white p-3 rounded-[24px] shadow-sm border border-[#C2A383]/10">
           <div className="flex items-center gap-2 mb-5 px-1">
             <i className="fas fa-th-large text-[#C2A383] text-[10px]"></i>
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chọn món nhanh</span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-1.5 px-0.5">
             {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => scrollToCategory(cat.id)}
-                className={`px-4 py-4 rounded-2xl text-[11px] font-black transition-all uppercase tracking-wider border text-center shadow-sm active:scale-95 ${activeCat === cat.id ? 'bg-[#C2A383] text-[#4B3621] border-transparent shadow-[#C2A383]/20 shadow-lg' : 'bg-[#FAF9F6] text-[#4B3621]/40 border-gray-100'
+                className={`px-1.5 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider border text-center shadow-sm active:scale-95 whitespace-normal leading-tight h-auto min-h-[48px] flex items-center justify-center w-full ${activeCat === cat.id ? 'bg-[#C2A383] text-[#4B3621] border-transparent shadow-[#C2A383]/20 shadow-lg' : 'bg-[#FAF9F6] text-[#4B3621]/40 border-gray-100'
                   }`}
               >
                 {cat.name}
@@ -221,7 +221,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
                 <div className="space-y-4 overflow-y-auto custom-scrollbar pr-1 flex-1">
                   {activeOrder.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-start group">
+                    <div key={idx} className="flex justify-between items-start group p-3.5 rounded-xl odd:bg-[#F5F0EB] even:bg-white border border-transparent hover:border-[#C2A383]/30 transition-colors mb-1">
                       <div className="flex gap-3">
                         {/* Admin Delete Action */}
                         {isAdmin && onRemoveItem && (
@@ -237,10 +237,10 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                             <i className="fas fa-trash-alt text-[9px]"></i>
                           </button>
                         )}
-                        <div className="w-6 h-6 rounded-lg bg-[#FAF9F6] text-[#4B3621] flex items-center justify-center font-black text-[10px] border border-gray-100 italic transition-transform group-hover:scale-110">
+                        <div className="w-6 h-6 rounded-lg bg-white text-[#4B3621] flex items-center justify-center font-black text-[10px] border border-gray-100 italic transition-transform group-hover:scale-110 shadow-sm">
                           {item.quantity}
                         </div>
-                        <span className="text-[13px] font-black text-[#4B3621] leading-tight mt-0.5">{item.productName}</span>
+                        <span className="text-[12px] font-black text-[#4B3621] leading-tight mt-0.5">{item.productName}</span>
                       </div>
                       <span className="text-[12px] font-black text-[#C2A383] tracking-tighter mt-0.5 whitespace-nowrap">{formatVND(item.price * item.quantity)}đ</span>
                     </div>
@@ -259,7 +259,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
                 <button
                   onClick={() => setShowHistory(false)}
-                  className="w-full mt-6 py-3 bg-gray-50 text-gray-400 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors shrink-0"
+                  className="w-full mt-6 py-4 bg-[#4B3621] text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] hover:bg-[#3E2C1B] transition-colors shrink-0 shadow-lg active:scale-95"
                 >
                   Đóng lịch sử
                 </button>

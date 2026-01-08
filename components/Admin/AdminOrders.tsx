@@ -39,7 +39,12 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
   };
 
   const activeOrders = orders.filter(o => o.status !== OrderStatus.PAID).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const paidOrders = orders.filter(o => o.status === OrderStatus.PAID).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const paidOrders = orders.filter(o => {
+    if (o.status !== OrderStatus.PAID) return false;
+    const orderDate = new Date(o.createdAt);
+    const today = new Date();
+    return orderDate.toDateString() === today.toDateString();
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const startCheckout = (order: Order) => {
     setSelectedOrder(order);

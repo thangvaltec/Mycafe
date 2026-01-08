@@ -25,6 +25,9 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrTable, setQrTable] = useState<Table | null>(null);
 
+  // Quick View State
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
+
   const currentOrder = selectedTable ? orders.find(o => o.tableId === selectedTable.id && o.status !== OrderStatus.PAID) : null;
 
   const handleOpenTable = () => {
@@ -138,10 +141,13 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
               <div>
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="text-xl lg:text-2xl font-black tracking-tighter leading-none">{t.name}</h3>
-                  {t.isOccupied && tableOrder && (
-                    <span className="text-[9px] font-black bg-white/10 text-[#C2A383] px-2 py-0.5 rounded-full uppercase min-w-[60px] text-center">
-                      {getStatusLabel(tableOrder.status)}
-                    </span>
+                  {tableOrder && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedOrderForDetail(tableOrder); }}
+                      className="bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-sm transition-colors uppercase tracking-wider"
+                    >
+                      Chi tiết
+                    </button>
                   )}
                 </div>
 
@@ -265,6 +271,39 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
               <button onClick={() => window.print()} className="w-full bg-[#4B3621] text-white py-5 rounded-3xl font-black text-xs uppercase shadow-xl active:scale-95 transition-transform"><i className="fas fa-print mr-2"></i> IN MÃ QR</button>
               <p className="text-[9px] text-gray-400 font-medium italic">URL: {window.location.host}/?tableId={qrTable.id}</p>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Detail Modal */}
+      {selectedOrderForDetail && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedOrderForDetail(null)}></div>
+          <div className="relative bg-[#FDFCF8] rounded-[40px] p-8 w-full max-w-sm shadow-2xl animate-fade-in flex flex-col border border-white/20">
+            <h3 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter mb-1 text-center">Chi tiết món gọi</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] text-center mb-6">Bàn {tables.find(t => String(t.id) === String(selectedOrderForDetail.tableId))?.tableNumber || '?'}</p>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 pr-2 max-h-[50vh]">
+              <div className="space-y-3">
+                {selectedOrderForDetail.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-4 rounded-2xl border border-gray-100 shadow-sm odd:bg-[#FAF9F6] even:bg-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#EAE8E4] text-[#4B3621] font-black text-xs flex items-center justify-center border border-white shadow-inner">
+                        x{item.quantity}
+                      </div>
+                      <span className="text-sm font-bold text-[#4B3621] leading-tight">{item.productName}</span>
+                    </div>
+                    <span className="text-xs font-black text-[#C2A383]">{new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedOrderForDetail(null)}
+              className="w-full bg-[#4B3621] text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#3E2C1B] active:scale-95 transition-all shadow-lg"
+            >
+              Đóng cửa sổ
+            </button>
           </div>
         </div>
       )}

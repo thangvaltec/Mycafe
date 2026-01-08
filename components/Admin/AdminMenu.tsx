@@ -130,24 +130,24 @@ const AdminMenu: React.FC<AdminMenuProps> = ({
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in pb-20">
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
-        <div className="flex-1">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3 bg-white p-2 rounded-[24px] shadow-sm border border-gray-100">
+        <div className="flex-1 w-full">
           <div className="flex items-center gap-2 mb-4">
             <i className="fas fa-layer-group text-[#C2A383]"></i>
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Duyệt nhanh danh mục</span>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 bg-gray-50/50 p-4 rounded-3xl border border-gray-100">
+          <div className="grid grid-cols-3 xl:grid-cols-4 gap-1.5 bg-gray-50/50 p-1.5 rounded-3xl border border-gray-100">
             {categories.map(c => (
-              <button key={c.id} onClick={() => scrollToCategory(c.id)} className="px-5 py-4 rounded-2xl bg-white border border-gray-100 shadow-sm text-[11px] font-black uppercase tracking-wider text-gray-600 hover:text-[#4B3621] hover:border-[#C2A383] hover:shadow-md transition-all flex items-center justify-between group">
-                <span className="truncate mr-2">{c.name}</span>
-                <span className="bg-gray-100 text-gray-400 group-hover:bg-[#C2A383] group-hover:text-white px-2 py-0.5 rounded-lg text-[9px] min-w-[20px] text-center transition-colors">{products.filter(p => p.categoryId === c.id).length}</span>
+              <button key={c.id} onClick={() => scrollToCategory(c.id)} className="px-2 py-3 rounded-xl bg-white border border-gray-100 shadow-sm text-[10px] font-black uppercase tracking-wider text-gray-600 hover:text-[#4B3621] hover:border-[#C2A383] hover:shadow-md transition-all flex items-center justify-between group whitespace-normal break-words leading-tight h-full w-full">
+                <span className="mr-0.5 text-left line-clamp-2 flex-1">{c.name}</span>
+                <span className="bg-gray-100 text-gray-400 group-hover:bg-[#C2A383] group-hover:text-white px-1 py-0.5 rounded-md text-[9px] min-w-[16px] text-center transition-colors shrink-0 ml-1">{products.filter(p => p.categoryId === c.id).length}</span>
               </button>
             ))}
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto shrink-0">
-          <button onClick={() => setIsCategoryModalOpen(true)} className="flex-1 sm:flex-none border-2 border-[#C2A383]/30 text-[#4B3621] px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#C2A383]/10">QUẢN LÝ DANH MỤC</button>
-          <button onClick={() => handleOpenProductModal()} className="flex-1 sm:flex-none bg-[#4B3621] text-white px-10 py-5 rounded-2xl font-black text-xs shadow-xl shadow-[#4B3621]/20">THÊM MÓN MỚI</button>
+        <div className="grid grid-cols-2 gap-4 w-full xl:w-auto shrink-0">
+          <button onClick={() => setIsCategoryModalOpen(true)} className="border-2 border-[#C2A383]/30 text-[#4B3621] px-4 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#C2A383]/10 text-center">QUẢN LÝ DANH MỤC</button>
+          <button onClick={() => handleOpenProductModal()} className="bg-[#4B3621] text-white px-4 py-4 rounded-2xl font-black text-xs shadow-xl shadow-[#4B3621]/20 text-center uppercase tracking-widest">THÊM MÓN MỚI</button>
         </div>
       </div>
 

@@ -318,25 +318,25 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                                 </button>
 
                                 <div>
-                                    <h3 className="text-4xl font-black text-white tracking-tighter mb-6">{tableCode}</h3>
+                                    <h3 className="text-4xl lg:text-3xl font-black text-white tracking-tighter mb-6">{tableCode}</h3>
                                     <div className="mb-6">
                                         <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Đang chơi</p>
-                                        <p className="text-2xl font-black text-[#C2A383] truncate">{activeSession.guestName}</p>
+                                        <p className="text-2xl lg:text-xl font-black text-[#C2A383] truncate">{activeSession.guestName}</p>
                                     </div>
                                     <div className="flex justify-between items-start mb-6 border-b border-white/5 pb-4">
                                         <div>
                                             <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Thời gian</p>
-                                            <p className="text-xl font-bold text-white font-mono">{getDurationString(activeSession.startTime)}</p>
+                                            <p className="text-xl lg:text-lg font-bold text-white font-mono">{getDurationString(activeSession.startTime)}</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Tiền giờ</p>
-                                            <p className="text-lg font-bold text-gray-400">{formatVND(activeSession.pricePerHour)}/h</p>
+                                            <p className="text-lg lg:text-base font-bold text-gray-400">{formatVND(activeSession.pricePerHour)}/h</p>
                                         </div>
                                     </div>
                                     <div className="bg-[#2A1E12] rounded-2xl p-4 border border-white/5 mb-4">
                                         <div className="flex justify-between items-center">
                                             <span className="text-[10px] font-black uppercase text-gray-500">Tạm tính:</span>
-                                            <span className="text-3xl font-black text-emerald-400 tracking-tighter">{formatVND(total)}đ</span>
+                                            <span className="text-3xl lg:text-2xl font-black text-emerald-400 tracking-tighter">{formatVND(total)}đ</span>
                                         </div>
                                         {foodOrder && (
                                             <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
@@ -375,7 +375,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                     return (
                         <div key={tableCode} className="relative bg-white text-gray-400 p-6 rounded-[32px] border-2 border-gray-100 shadow-sm flex flex-col justify-between min-h-[360px]">
                             <div className="flex justify-between items-start">
-                                <h3 className="text-4xl font-black tracking-tighter opacity-30">{tableCode}</h3>
+                                <h3 className="text-4xl lg:text-3xl font-black tracking-tighter opacity-30">{tableCode}</h3>
                                 {realTable && (
                                     <button
                                         onClick={() => setShowQR(realTable.id)}
@@ -456,30 +456,32 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
 
             {/* QR Modal */}
             {showQR && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowQR(null)}></div>
-                    <div className="relative bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl animate-scale-in flex flex-col items-center">
-                        <button onClick={() => setShowQR(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200">
-                            <i className="fas fa-times"></i>
-                        </button>
-                        <h3 className="text-xl font-black text-[#4B3621] mb-2 uppercase tracking-tighter">Quét mã gọi món</h3>
-                        <p className="text-sm text-gray-400 mb-6 font-medium text-center">Khách hàng quét mã này để tự gọi món</p>
+                <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowQR(null)}></div>
+                    <div className="relative bg-white rounded-[50px] p-10 w-full max-w-sm shadow-2xl animate-fade-in text-center">
+                        <div className="absolute top-6 right-6">
+                            <button onClick={() => setShowQR(null)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all"><i className="fas fa-times"></i></button>
+                        </div>
 
-                        <div className="bg-white p-4 rounded-xl shadow-lg border-2 border-[#4B3621]/10 mb-6">
+                        <div className="mt-4 mb-2">
+                            <h3 className="text-3xl font-black text-[#4B3621] tracking-tighter uppercase mb-1">
+                                MÃ QR {tables.find(t => t.id === showQR)?.name || showQR}
+                            </h3>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">Quét để gọi món tại bàn</p>
+                        </div>
+
+                        <div className="bg-[#FAF9F6] p-8 rounded-[40px] my-8 border-2 border-dashed border-[#C2A383]/30 flex justify-center shadow-inner">
                             <QRCodeSVG
                                 value={`${window.location.protocol}//${window.location.host}/?tableId=${showQR}`}
                                 size={200}
                                 level="H"
                                 includeMargin={true}
-                                fgColor="#4B3621"
                             />
                         </div>
 
-                        <div className="bg-gray-50 p-4 rounded-xl w-full text-center">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Đường dẫn</p>
-                            <p className="text-xs font-mono text-[#4B3621] truncate select-all">
-                                {window.location.host}/?tableId={showQR}
-                            </p>
+                        <div className="space-y-4">
+                            <button onClick={() => window.print()} className="w-full bg-[#4B3621] text-white py-5 rounded-3xl font-black text-xs uppercase shadow-xl active:scale-95 transition-transform"><i className="fas fa-print mr-2"></i> IN MÃ QR</button>
+                            <p className="text-[9px] text-gray-400 font-medium italic">URL: {window.location.host}/?tableId={showQR}</p>
                         </div>
                     </div>
                 </div>
@@ -510,21 +512,21 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
             {selectedOrderForDetail && (
                 <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedOrderForDetail(null)}></div>
-                    <div className="relative bg-[#3E2C1B] rounded-[40px] p-8 w-full max-w-sm shadow-2xl animate-fade-in flex flex-col border border-[#C2A383]/20">
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 text-center">Món đã gọi</h3>
-                        <p className="text-[10px] font-bold text-[#C2A383] uppercase tracking-[0.2em] text-center mb-6">
+                    <div className="relative bg-[#FDFCF8] rounded-[40px] p-8 w-full max-w-sm shadow-2xl animate-fade-in flex flex-col border border-white/20">
+                        <h3 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter mb-1 text-center">Món đã gọi</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] text-center mb-6">
                             {tables.find(t => String(t.id) === String(selectedOrderForDetail.tableId))?.tableNumber || '?'}
                         </p>
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 pr-2 max-h-[50vh]">
                             <div className="space-y-3">
                                 {selectedOrderForDetail.items.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5 shadow-sm">
+                                    <div key={idx} className="flex justify-between items-center p-4 rounded-2xl border border-gray-100 shadow-sm odd:bg-[#FAF9F6] even:bg-white">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-[#C2A383] text-[#4B3621] font-black text-xs flex items-center justify-center shadow-lg">
+                                            <div className="w-8 h-8 rounded-lg bg-[#EAE8E4] text-[#4B3621] font-black text-xs flex items-center justify-center border border-white shadow-inner">
                                                 x{item.quantity}
                                             </div>
-                                            <span className="text-sm font-bold text-gray-200 leading-tight">{item.productName}</span>
+                                            <span className="text-sm font-bold text-[#4B3621] leading-tight">{item.productName}</span>
                                         </div>
                                         <span className="text-xs font-black text-[#C2A383]">{formatVND(item.price * item.quantity)}</span>
                                     </div>
@@ -534,7 +536,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
 
                         <button
                             onClick={() => setSelectedOrderForDetail(null)}
-                            className="w-full bg-[#C2A383] text-[#4B3621] py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white active:scale-95 transition-all shadow-lg"
+                            className="w-full bg-[#4B3621] text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#3E2C1B] active:scale-95 transition-all shadow-lg"
                         >
                             Đóng cửa sổ
                         </button>
