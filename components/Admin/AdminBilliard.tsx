@@ -38,6 +38,9 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
     const [sessions, setSessions] = useState<BilliardSession[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
 
+    // Quick View State
+    const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
+
     const [activeFormTable, setActiveFormTable] = useState<string | null>(null);
     const [guestName, setGuestName] = useState('');
     const [numPeople, setNumPeople] = useState('2');
@@ -337,7 +340,15 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                                         </div>
                                         {foodOrder && (
                                             <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                                                <span className="text-[9px] text-orange-400"><i className="fas fa-utensils mr-1"></i>Đồ ăn</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] text-orange-400"><i className="fas fa-utensils mr-1"></i>Đồ ăn</span>
+                                                    <button
+                                                        onClick={() => setSelectedOrderForDetail(foodOrder)}
+                                                        className="text-[8px] font-black bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-md hover:bg-orange-500 hover:text-white transition-colors uppercase tracking-wide"
+                                                    >
+                                                        Chi tiết
+                                                    </button>
+                                                </div>
                                                 <span className="text-xs font-bold text-gray-400">{formatVND(foodOrder.totalAmount)}đ</span>
                                             </div>
                                         )}
@@ -493,6 +504,42 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                         fetchData();
                     }}
                 />
+            )}
+
+            {/* Detail Modal for Billiard Food */}
+            {selectedOrderForDetail && (
+                <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedOrderForDetail(null)}></div>
+                    <div className="relative bg-[#3E2C1B] rounded-[40px] p-8 w-full max-w-sm shadow-2xl animate-fade-in flex flex-col border border-[#C2A383]/20">
+                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 text-center">Món đã gọi</h3>
+                        <p className="text-[10px] font-bold text-[#C2A383] uppercase tracking-[0.2em] text-center mb-6">
+                            {tables.find(t => String(t.id) === String(selectedOrderForDetail.tableId))?.tableNumber || '?'}
+                        </p>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 pr-2 max-h-[50vh]">
+                            <div className="space-y-3">
+                                {selectedOrderForDetail.items.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5 shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#C2A383] text-[#4B3621] font-black text-xs flex items-center justify-center shadow-lg">
+                                                x{item.quantity}
+                                            </div>
+                                            <span className="text-sm font-bold text-gray-200 leading-tight">{item.productName}</span>
+                                        </div>
+                                        <span className="text-xs font-black text-[#C2A383]">{formatVND(item.price * item.quantity)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setSelectedOrderForDetail(null)}
+                            className="w-full bg-[#C2A383] text-[#4B3621] py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white active:scale-95 transition-all shadow-lg"
+                        >
+                            Đóng cửa sổ
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
