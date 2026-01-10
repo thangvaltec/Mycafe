@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Order, PaymentMethod, Table } from '../../types';
 import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
-import { BANK_QR_IMAGE_URL } from '../../constants';
+import { getBankQrUrl, getBankSettings, SUPPORTED_BANKS } from '../../utils/settings';
 import { api } from '../../services/api';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -318,51 +317,44 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
 
                         {/* TRANSFER VIEW */}
                         <div className={`transition-all duration-300 h-full flex flex-col items-center pt-8 ${activeTab === 'transfer' ? 'flex opacity-100' : 'hidden opacity-0'}`}>
-                            <div className="bg-white p-4 rounded-[32px] shadow-xl border-2 border-[#D4A373]/10 mb-8 shrink-0">
-                                <QRCodeSVG
-                                    value={`${BANK_QR_IMAGE_URL}&amount=${order.totalAmount}`}
-                                    size={200}
-                                    level="M"
-                                    imageSettings={{
-                                        src: "https://imagedelivery.net/KMb5Epp0S1q9aD0Wl4yV_A/b404431f-0e6e-4c74-0466-417163821f00/public",
-                                        x: undefined,
-                                        y: undefined,
-                                        height: 30,
-                                        width: 30,
-                                        excavate: true,
-                                    }}
+                            <div className="bg-white p-4 rounded-[32px] shadow-xl border-2 border-[#D4A373]/10 mb-8 shrink-0 flex flex-col items-center">
+                                <img
+                                    src={getBankQrUrl(currentTotal, `Thanh toan Order`)}
+                                    alt="Mã QR Chuyển khoản"
+                                    className="w-[200px] h-[300px] object-contain mix-blend-multiply"
                                 />
                             </div>
                             <div className="text-center">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Số tiền cần chuyển</p>
                                 <p className="text-4xl font-black text-[#4B3621] tracking-tighter">{formatVND(currentTotal)}</p>
+                                <p className="text-[10px] text-gray-400 mt-2 italic">Quét mã bằng ứng dụng Ngân hàng</p>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Bottom Action Button - FIXED SAFARI PADDING */}
-                    {/* Added pb-8 md:pb-8 for extra bottom breathing room, essential for Safari mobile */}
-                    <div className="p-5 md:p-8 pt-4 mt-auto shrink-0 bg-white border-t border-gray-50 pb-12 md:pb-8">
-                        <button
-                            onClick={() => finalizePayment(activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER)}
-                            disabled={isSubmitting || (activeTab === 'cash' && receivedAmount < currentTotal)}
-                            className={`w-full py-5 rounded-[20px] font-black text-sm uppercase tracking-[0.2em] shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-3
+                        {/* Bottom Action Button - FIXED SAFARI PADDING */}
+                        {/* Added pb-8 md:pb-8 for extra bottom breathing room, essential for Safari mobile */}
+                        <div className="p-5 md:p-8 pt-4 mt-auto shrink-0 bg-white border-t border-gray-50 pb-12 md:pb-8">
+                            <button
+                                onClick={() => finalizePayment(activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER)}
+                                disabled={isSubmitting || (activeTab === 'cash' && receivedAmount < currentTotal)}
+                                className={`w-full py-5 rounded-[20px] font-black text-sm uppercase tracking-[0.2em] shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-3
                                 ${activeTab === 'cash'
-                                    ? 'bg-[#4B3621] text-white hover:bg-[#3E2C1B] disabled:bg-gray-100 disabled:text-gray-300 disabled:shadow-none'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
-                                }`}
-                        >
-                            {isSubmitting ? (
-                                <i className="fas fa-spinner fa-spin"></i>
-                            ) : (
-                                <>
-                                    <span>{activeTab === 'cash' ? 'Hoàn tất thanh toán' : 'Xác nhận đã nhận tiền'}</span>
-                                    <i className="fas fa-arrow-right"></i>
-                                </>
-                            )}
-                        </button>
-                    </div>
+                                        ? 'bg-[#4B3621] text-white hover:bg-[#3E2C1B] disabled:bg-gray-100 disabled:text-gray-300 disabled:shadow-none'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
+                                    }`}
+                            >
+                                {isSubmitting ? (
+                                    <i className="fas fa-spinner fa-spin"></i>
+                                ) : (
+                                    <>
+                                        <span>{activeTab === 'cash' ? 'Hoàn tất thanh toán' : 'Xác nhận đã nhận tiền'}</span>
+                                        <i className="fas fa-arrow-right"></i>
+                                    </>
+                                )}
+                            </button>
+                        </div>
 
+                    </div>
                 </div>
             </div>
         </div>

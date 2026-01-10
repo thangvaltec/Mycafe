@@ -442,8 +442,8 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
               <tr className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                 <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm w-32 border-b border-gray-100/50">Thời gian</th>
                 <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm w-32 text-center border-b border-gray-100/50">Loại</th>
-                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm text-right border-b border-gray-100/50">Giá trị</th>
-                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm text-right border-b border-gray-100/50">Nội dung</th>
+                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm text-right border-b border-gray-100/50 w-48">Giá trị</th>
+                <th className="px-6 py-4 bg-gray-50/80 backdrop-blur-sm text-left border-b border-gray-100/50">Nội dung</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -466,14 +466,14 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                   <td className={`px-6 py-4 text-right font-black text-lg tracking-tighter ${item.type === 'IN' ? 'text-emerald-600' : 'text-red-500'}`}>
                     {item.type === 'IN' ? '+' : '-'}{formatVND(item.totalAmount || item.amount || 0)}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-left">
                     <p className="text-sm font-bold text-[#4B3621] line-clamp-1">
                       {item.type === 'IN' ? (
                         item.tableId === 'MANG_VE' ? 'Khách mang về' : `${tables.find(t => t.id === item.tableId)?.name || `Bàn ${item.tableId}`}`
                       ) : item.description}
                     </p>
                     {item.type === 'IN' && (
-                      <p className="text-[10px] text-gray-400 truncate w-48 ml-auto">{item.items?.map((i: any) => i.productName).join(', ')}</p>
+                      <p className="text-[10px] text-gray-400 truncate max-w-xs">{item.items?.map((i: any) => i.productName).join(', ')}</p>
                     )}
                   </td>
                 </tr>

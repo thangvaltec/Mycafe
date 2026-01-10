@@ -45,7 +45,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   onSetOrders, onSetExpenses, onSetTables, onAddCategory, onUpdateCategory, onDeleteCategory,
   onLogout, onSwitchMode, role
 }) => {
-  const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'expenses' | 'orders' | 'menu' | 'report' | 'billiard'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'expenses' | 'orders' | 'menu' | 'report' | 'billiard' | 'settings'>('pos'); // UPDATED
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
   const [currentOrderingTable, setCurrentOrderingTable] = useState<Table | { id: string, name: string, guestName?: string } | null>(null);
 
@@ -122,7 +122,7 @@ const AdminView: React.FC<AdminViewProps> = ({
             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Hệ thống quản trị</p>
           </div>
         </div>
-        <div className="flex flex-1 justify-around lg:flex-col lg:justify-start lg:p-4 gap-1 lg:gap-2 w-full">
+        <div className="flex flex-1 justify-around lg:flex-col lg:justify-start lg:p-2 gap-1 lg:gap-1 w-full overflow-y-auto custom-scrollbar">
           {[
             { id: 'pos', icon: 'fa-table-cells', label: 'Phục vụ' },
             { id: 'takeaway', icon: 'fa-bag-shopping', label: 'Mang về' },
@@ -132,8 +132,8 @@ const AdminView: React.FC<AdminViewProps> = ({
             { id: 'expenses', icon: 'fa-wallet', label: 'Chi phí' },
             { id: 'report', icon: 'fa-chart-pie', label: 'Báo cáo' }
           ].filter(item => role !== 'STAFF' || (item.id !== 'expenses' && item.id !== 'report')).map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex-1 lg:flex-none p-2 lg:p-4 rounded-xl lg:rounded-2xl flex flex-col lg:flex-row items-center gap-1 lg:gap-4 transition-all ${activeTab === item.id ? 'bg-[#C2A383] text-[#4B3621] font-bold shadow-lg' : 'text-gray-400 hover:text-white'}`}>
-              <i className={`fas ${item.icon} text-lg lg:text-xl`}></i>
+            <button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`flex-1 lg:flex-none p-2 lg:px-4 lg:py-3 rounded-xl lg:rounded-2xl flex flex-col lg:flex-row items-center gap-1 lg:gap-4 transition-all shrink-0 ${activeTab === item.id ? 'bg-[#C2A383] text-[#4B3621] font-bold shadow-lg' : 'text-gray-400 hover:text-white'}`}>
+              <i className={`fas ${item.icon} text-lg lg:text-lg`}></i>
               <span className="text-[10px] lg:text-sm font-black whitespace-nowrap">{item.label}</span>
             </button>
           ))}

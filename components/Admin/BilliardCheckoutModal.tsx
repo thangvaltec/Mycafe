@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Order, PaymentMethod, Table } from '../../types';
 import { formatVND, parseVND, handleMoneyInput } from '../../utils/format';
-import { BANK_QR_IMAGE_URL } from '../../constants';
+import { getBankQrUrl, getBankSettings, SUPPORTED_BANKS } from '../../utils/settings';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../../services/api';
 
@@ -361,16 +361,11 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full space-y-6 animate-scale-in">
-                                    <div className="bg-white p-6 rounded-[32px] shadow-xl border-4 border-white ring-1 ring-gray-100">
-                                        <QRCodeSVG
-                                            value={`${BANK_QR_IMAGE_URL}&amount=${calculations.totalAmount}`}
-                                            size={200}
-                                            level="M"
-                                            includeMargin
-                                            imageSettings={{
-                                                src: "https://imagedelivery.net/KMb5Epp0S1q9aD0Wl4yV_A/b404431f-0e6e-4c74-0466-417163821f00/public",
-                                                x: undefined, y: undefined, height: 30, width: 30, excavate: true
-                                            }}
+                                    <div className="bg-white p-6 rounded-[32px] shadow-xl border-4 border-white ring-1 ring-gray-100 flex flex-col items-center">
+                                        <img
+                                            src={getBankQrUrl(calculations.totalAmount, "Thanh toan Bill Bida")}
+                                            alt="Mã QR Chuyển khoản"
+                                            className="w-[200px] h-[300px] object-contain mix-blend-multiply"
                                         />
                                     </div>
                                     <div className="text-center">
