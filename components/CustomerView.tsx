@@ -336,6 +336,13 @@ const CustomerView: React.FC<CustomerViewProps> = ({
         <div className="fixed inset-0 z-[200] flex flex-col justify-end p-3">
           <div className="absolute inset-0 bg-[#4B3621]/80 backdrop-blur-md" onClick={() => setShowSheet(false)}></div>
           <div className="relative bg-[#FDFCF8] rounded-[48px] p-8 animate-slide-up max-h-[85vh] flex flex-col max-w-[500px] mx-auto w-full shadow-2xl">
+            <button
+              onClick={() => setShowSheet(false)}
+              className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-[#4B3621] text-white flex items-center gap-2 shadow-lg active:scale-95 transition-transform z-10"
+            >
+              <span className="text-[10px] font-black uppercase tracking-widest">ĐÓNG</span>
+              <i className="fas fa-times text-xs"></i>
+            </button>
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8"></div>
             <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter mb-8 italic border-b border-gray-100 pb-5">Xác nhận đặt món</h3>
 
