@@ -25,21 +25,26 @@ public class PaymentController : ControllerBase
         // Try to find order by OrderId first (if provided)
         if (request.OrderId.HasValue)
         {
-            order = await _context.Orders.FindAsync(request.OrderId.Value);
+            order = await _context.Orders
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == request.OrderId.Value);
+                
             if (order == null) return NotFound("Không tìm thấy đơn hàng");
             
             table = await _context.Tables.FindAsync(order.TableId);
         }
         else if (request.TableId.HasValue)
         {
-            // Fallback: Find by TableId (original logic)
             table = await _context.Tables.FindAsync(request.TableId.Value);
             if (table == null) return NotFound("Không tìm thấy bàn");
 
             if (table.CurrentOrderId == null)
                 return BadRequest("Bàn này chưa có đơn hàng nào");
 
-            order = await _context.Orders.FindAsync(table.CurrentOrderId);
+            order = await _context.Orders
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == table.CurrentOrderId);
+                
             if (order == null) return NotFound("Không tìm thấy đơn hàng");
         }
         else
