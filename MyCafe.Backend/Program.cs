@@ -83,39 +83,30 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         try
         {
             var db = services.GetRequiredService<AppDbContext>();
-            // 30 Years Experience: Migrate is safer for cloud DBs than EnsureCreated
-            db.Database.Migrate(); 
             
+            // 30 Years Experience: When Migrations clash on Cloud DBs, Manual 'IF NOT EXISTS' is king
             try 
             {
-               Console.WriteLine("[SCHEMA PATCH] Attempting to add discount_amount...");
-               db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number SERIAL;");
-               db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
-               Console.WriteLine("[SCHEMA PATCH] Success!");
+                Console.WriteLine("[DB INIT] Ensuring tables exist...");
+                db.Database.ExecuteSqlRaw(@"
+                    CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username VARCHAR(50) NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(20) DEFAULT 'ADMIN');
+                    CREATE TABLE IF NOT EXISTS categories (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL);
+                    CREATE TABLE IF NOT EXISTS tables (id SERIAL PRIMARY KEY, table_number TEXT, name VARCHAR(50) NOT NULL, alias VARCHAR(100), guest_name VARCHAR(100), status VARCHAR(20) DEFAULT 'Empty', is_occupied BOOLEAN DEFAULT FALSE, current_order_id UUID);
+                    CREATE TABLE IF NOT EXISTS menu_items (id UUID PRIMARY KEY, category_id UUID REFERENCES categories(id), name VARCHAR(200) NOT NULL, price DECIMAL(18,2) NOT NULL, image_path VARCHAR(500), is_active BOOLEAN DEFAULT TRUE, description TEXT);
+                    CREATE TABLE IF NOT EXISTS orders (id UUID PRIMARY KEY, table_id INT REFERENCES tables(id), order_number SERIAL, status VARCHAR(20) DEFAULT 'NEW', total_amount DECIMAL(18,2) DEFAULT 0, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, payment_method VARCHAR(20), payment_amount DECIMAL(18,2), change_amount DECIMAL(18,2), discount_amount DECIMAL(18,2) DEFAULT 0);
+                    CREATE TABLE IF NOT EXISTS order_items (id UUID PRIMARY KEY, order_id UUID REFERENCES orders(id) ON DELETE CASCADE, product_id UUID REFERENCES menu_items(id), product_name VARCHAR(200), price DECIMAL(18,2) NOT NULL, quantity INT NOT NULL);
+                    CREATE TABLE IF NOT EXISTS billiard_sessions (id UUID PRIMARY KEY, table_id INT, guest_name VARCHAR(100) NOT NULL, num_people INT DEFAULT 2, price_per_hour DECIMAL(18,2) NOT NULL, start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, end_time TIMESTAMP WITH TIME ZONE, total_amount DECIMAL(18,2) DEFAULT 0, status VARCHAR(20) DEFAULT 'ACTIVE');
+                    CREATE TABLE IF NOT EXISTS invoices (id UUID PRIMARY KEY, table_id INT NOT NULL, billiard_session_id UUID, order_id UUID, total_amount DECIMAL(18,2) DEFAULT 0, payment_method VARCHAR(50) DEFAULT 'cash', identify_string VARCHAR(200) NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, discount DECIMAL(18,2) DEFAULT 0);
+                    CREATE TABLE IF NOT EXISTS invoice_items (id UUID PRIMARY KEY, invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE, name VARCHAR(200) NOT NULL, quantity INT DEFAULT 1, unit_price DECIMAL(18,2) NOT NULL, total_price DECIMAL(18,2) NOT NULL, type VARCHAR(50) DEFAULT 'ITEM');
+                    CREATE TABLE IF NOT EXISTS expenses (id UUID PRIMARY KEY, description TEXT NOT NULL, amount DECIMAL(18,2) NOT NULL, date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);
+                ");
+                
+                // Patch for missing columns from older versions
+                db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
+                db.Database.ExecuteSqlRaw("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount DECIMAL(18,2) DEFAULT 0;");
+                Console.WriteLine("[DB INIT] Schema verified.");
             } 
-            catch (Exception ex) { Console.WriteLine($"[SCHEMA PATCH ERROR] {ex.Message}"); }
-
-            // PATCH: Create billiard_sessions table for existing databases
-            try
-            {
-                var createBilliardTableSql = @"
-                    CREATE TABLE IF NOT EXISTS billiard_sessions (
-                        id UUID PRIMARY KEY,
-                        table_id INT,
-                        guest_name VARCHAR(100) NOT NULL,
-                        num_people INT NOT NULL DEFAULT 2,
-                        price_per_hour DECIMAL(18, 2) NOT NULL,
-                        start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                        end_time TIMESTAMP WITH TIME ZONE,
-                        total_amount DECIMAL(18, 2) DEFAULT 0,
-                        status VARCHAR(20) DEFAULT 'ACTIVE'
-                    );";
-                db.Database.ExecuteSqlRaw(createBilliardTableSql);
-            }
-            catch (Exception ex) 
-            {
-                Console.WriteLine($"[PATCH WARNING] Could not create billiard_sessions: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"[DB INIT ERROR] {ex.Message}"); }
 
             // 1. Seed Users
             if (!db.Users.Any())
