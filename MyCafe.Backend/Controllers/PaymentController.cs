@@ -131,7 +131,7 @@ public class CheckoutRequest
 {
     public int? TableId { get; set; }
     public Guid? OrderId { get; set; }
-    public string PaymentMethod { get; set; } // "cash" or "bank_transfer"
+    public required string PaymentMethod { get; set; } // "cash" or "bank_transfer"
     public decimal ReceivedAmount { get; set; }
     public decimal Discount { get; set; } = 0;
 }

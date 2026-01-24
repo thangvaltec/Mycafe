@@ -171,7 +171,6 @@ public class BilliardController : ControllerBase
             // Use Manual Times or Current Time
             var finalEndTime = request.FinalEndTime ?? DateTime.UtcNow;
             
-            decimal totalAmount = 0;
             var invoice = new Invoice
             {
                 TableId = tableId,

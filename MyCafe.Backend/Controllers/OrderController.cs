@@ -58,15 +58,19 @@ public class OrderController : ControllerBase
         // Check if there's an active order for this table
         if (table.CurrentOrderId != null)
         {
-            order = await _context.Orders
+            var existingOrder = await _context.Orders
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.Id == table.CurrentOrderId);
                 
-            if (order == null || order.Status == "PAID")
+            if (existingOrder == null || existingOrder.Status == "PAID")
             {
                 // Should not happen if logic is correct, but safe fallback
                 isNewOrder = true;
                 order = CreateNewOrder(table.Id);
+            }
+            else 
+            {
+                order = existingOrder;
             }
         }
         else

@@ -47,9 +47,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             Password = userInfo[1],
             Database = uri.AbsolutePath.TrimStart('/'),
             SslMode = Npgsql.SslMode.Require,
-            TrustServerCertificate = true,
-            // Critical for PgBouncer Transaction Mode
-            MaxAutoPrepare = 0
+            // Critical for PgBouncer Transaction Mode (Port 6543)
+            MaxAutoPrepare = 0,
+            Pooling = false 
         };
         connString = connBuilder.ToString();
     }
