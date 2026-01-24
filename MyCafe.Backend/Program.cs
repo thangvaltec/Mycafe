@@ -113,10 +113,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 db.Users.Add(new User { Username = "thang", Password = "admin123", Role = "ADMIN" });
                 db.Users.Add(new User { Username = "admin", Password = "admin123", Role = "ADMIN" });
+                db.Users.Add(new User { Username = "staff", Password = "staff123", Role = "STAFF" });
             }
-            else if (!db.Users.Any(u => u.Username == "admin"))
+            else 
             {
-                 db.Users.Add(new User { Username = "admin", Password = "admin123", Role = "ADMIN" });
+                 if (!db.Users.Any(u => u.Username == "admin"))
+                    db.Users.Add(new User { Username = "admin", Password = "admin123", Role = "ADMIN" });
+                 if (!db.Users.Any(u => u.Username == "staff"))
+                    db.Users.Add(new User { Username = "staff", Password = "staff123", Role = "STAFF" });
             }
 
             // 2. Seed Initial Tables (Fixed Configuration: 4 Billiard, 10 Cafe, 1 Takeaway)

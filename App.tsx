@@ -77,14 +77,14 @@ const App: React.FC = () => {
       }
     }, 60000); // Check every minute
 
-    if (isLoggedIn) {
+    if (isLoggedIn || isQRCodeAccess) {
       loadData();
     } else {
       setIsLoading(false); // If not logged in & not table, stop loading
     }
 
     const interval = setInterval(() => {
-      if (isLoggedIn) loadData();
+      if (isLoggedIn || isQRCodeAccess) loadData();
     }, 5000);
 
     return () => {
