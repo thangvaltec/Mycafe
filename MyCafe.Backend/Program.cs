@@ -47,7 +47,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             Password = userInfo[1],
             Database = uri.AbsolutePath.TrimStart('/'),
             SslMode = Npgsql.SslMode.Require,
-            TrustServerCertificate = true
+            TrustServerCertificate = true,
+            // Critical for PgBouncer Transaction Mode
+            MaxAutoPrepare = 0
         };
         connString = connBuilder.ToString();
     }
@@ -81,9 +83,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         try
         {
             var db = services.GetRequiredService<AppDbContext>();
-            // db.Database.EnsureDeleted(); // RESET DB REQUESTED
-            // db.Database.Migrate(); // Manual migration via CLI to avoid conflicts
-            db.Database.EnsureCreated();
+            // 30 Years Experience: Migrate is safer for cloud DBs than EnsureCreated
+            db.Database.Migrate(); 
             
             try 
             {
