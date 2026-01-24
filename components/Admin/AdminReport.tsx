@@ -86,7 +86,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
       return t >= startTime && t < endTime;
     });
 
-    const rev = fOrders.reduce((a, b) => a + b.totalAmount, 0);
+    const rev = fOrders.reduce((a, b) => a + (b.totalAmount - (b.discountAmount || 0)), 0);
     const exp = fExpenses.reduce((a, b) => a + b.amount, 0);
 
     return {
@@ -99,7 +99,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
 
   const downloadCSV = () => {
     // 1. Define Columns (Added 'Loại', Removed 'Mã Đơn')
-    const headers = ['Ngày', 'Loại', 'Bàn/Khu vực', 'Chi tiết món', 'Hình thức TT', 'Tổng tiền (VNĐ)'];
+    const headers = ['Ngày', 'Loại', 'Bàn/Khu vực', 'Chi tiết món', 'Hình thức TT', 'Thực thu (VNĐ)', 'Giảm giá (VNĐ)'];
 
     // 2. Format Data (Combine Orders and Expenses)
     const combinedData = [
@@ -137,7 +137,8 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
         tableInfo,
         `"${descStr}"`, // Quote to handle commas
         payment,
-        amount
+        item.type === 'IN' ? (item.totalAmount - (item.discountAmount || 0)) : item.amount,
+        item.type === 'IN' ? (item.discountAmount || 0) : ''
       ].join(',');
     });
 
@@ -464,7 +465,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                     </span>
                   </td>
                   <td className={`px-6 py-4 text-right font-black text-lg tracking-tighter ${item.type === 'IN' ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {item.type === 'IN' ? '+' : '-'}{formatVND(item.totalAmount || item.amount || 0)}
+                    {item.type === 'IN' ? '+' : '-'}{formatVND(item.type === 'IN' ? (item.totalAmount - (item.discountAmount || 0)) : (item.amount || 0))}
                   </td>
                   <td className="px-6 py-4 text-left">
                     <p className="text-sm font-bold text-[#4B3621] line-clamp-1">

@@ -25,6 +25,12 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     const [adjustedStartTime, setAdjustedStartTime] = useState<string>(startTime);
     const [adjustedEndTime, setAdjustedEndTime] = useState<string>(new Date().toISOString());
 
+    // Discount State
+    const [discountMode, setDiscountMode] = useState<'percent' | 'amount'>('percent');
+    const [discountValue, setDiscountValue] = useState<number>(0);
+    const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+
     // --- Step 2: Payment State ---
     const [activeTab, setActiveTab] = useState<'cash' | 'transfer'>('cash');
     const [receivedAmountStr, setReceivedAmountStr] = useState<string>('');
@@ -50,16 +56,32 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
             .filter(i => i.productId !== 'billiard-fee')
             .reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        const totalAmount = timeFee + menuFee;
+        const subTotal = timeFee + menuFee;
+
+        // Discount Calculation
+        let discountAmount = 0;
+        if (discountValue > 0) {
+            if (discountMode === 'percent') {
+                discountAmount = (subTotal * discountValue) / 100;
+            } else {
+                discountAmount = discountValue;
+            }
+        }
+        // Cap discount
+        if (discountAmount > subTotal) discountAmount = subTotal;
+
+        const totalAmount = Math.max(0, subTotal - discountAmount);
 
         return {
             durationMinutes: Math.floor(durationMinutes),
             durationString: `${Math.floor(durationMinutes / 60)}h ${Math.floor(durationMinutes % 60)}m`,
             timeFee,
             menuFee,
+            subTotal,
+            discountAmount,
             totalAmount
         };
-    }, [adjustedStartTime, adjustedEndTime, pricePerHour, order.items]);
+    }, [adjustedStartTime, adjustedEndTime, pricePerHour, order.items, discountMode, discountValue]);
 
     // --- Helpers ---
     const TIME_OPTIONS = Array.from({ length: 96 }).map((_, i) => {
@@ -81,9 +103,8 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     };
 
     const handleConfirmTime = () => {
-        if (calculations.totalAmount <= 0) {
-            alert("Tổng tiền phải lớn hơn 0");
-            return;
+        if (calculations.totalAmount <= 0 && calculations.subTotal > 0 && calculations.discountAmount < calculations.subTotal) {
+            // Allow 0 if fully discounted, but warn if negative logic (already handled by Math.max)
         }
         setStep('payment');
         setReceivedAmountStr(formatVND(calculations.totalAmount)); // Pre-fill exact amount for convenience
@@ -98,6 +119,16 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
             return;
         }
 
+        // Security Check: If Discount Applied, Require Password
+        if (calculations.discountAmount > 0) {
+            setShowPasswordPrompt(true);
+            return;
+        }
+
+        await executePayment();
+    };
+
+    const executePayment = async () => {
         setIsSubmitting(true);
         try {
             await api.billiardCheckout(
@@ -105,13 +136,33 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                 activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER,
                 activeTab === 'cash' ? receivedAmount : calculations.totalAmount,
                 adjustedStartTime,
-                adjustedEndTime
+                adjustedEndTime,
+                calculations.discountAmount // Pass calculated discount
             );
             alert("✅ Thanh toán thành công!");
             onSuccess();
         } catch (err: any) {
             alert("❌ Lỗi thanh toán: " + (err.message || err));
             setIsSubmitting(false);
+            setShowPasswordPrompt(false); // Reset password prompt if error
+        }
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            // Unify with main Admin password (checking against database)
+            const res = await api.login('admin', passwordInput);
+            if (res.token) {
+                setShowPasswordPrompt(false);
+                executePayment();
+            } else {
+                alert("Mật khẩu không đúng!");
+                setPasswordInput('');
+            }
+        } catch (err) {
+            alert("Lỗi xác thực hoặc lỗi kết nối!");
+            setPasswordInput('');
         }
     };
 
@@ -125,6 +176,35 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 overflow-y-auto">
             <div className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity" onClick={onClose}></div>
 
+            {/* PASSWORD MODAL OVERLAY */}
+            {showPasswordPrompt && (
+                <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl scale-100 animate-scale-in">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                <i className="fas fa-lock"></i>
+                            </div>
+                            <h3 className="text-xl font-black text-[#4B3621] uppercase">Xác nhận giảm giá</h3>
+                            <p className="text-sm text-gray-500 mt-2">Vui lòng nhập mật khẩu Admin để áp dụng mức giảm <b>{formatVND(calculations.discountAmount)}</b></p>
+                        </div>
+                        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                            <input
+                                autoFocus
+                                type="password"
+                                value={passwordInput}
+                                onChange={e => setPasswordInput(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center font-bold text-[#4B3621] outline-none focus:border-[#C2A383]"
+                                placeholder="Nhập mật khẩu..."
+                            />
+                            <div className="flex gap-3">
+                                <button type="button" onClick={() => setShowPasswordPrompt(false)} className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold uppercase text-xs hover:bg-gray-200">Hủy</button>
+                                <button type="submit" className="flex-1 py-3 bg-[#4B3621] text-white rounded-xl font-bold uppercase text-xs hover:bg-[#3E2C1B]">Xác nhận</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className={`relative w-full bg-[#FAF9F6] rounded-[32px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 animate-slide-up bg-white my-auto
                 ${step === 'payment' ? 'max-w-lg md:max-w-5xl md:flex-row md:h-[600px]' : 'max-w-lg'}`}>
 
@@ -132,18 +212,33 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                 <div className={`flex flex-col bg-white transition-all duration-300 relative z-10
                     ${step === 'payment' ? 'w-full md:w-[45%] border-b md:border-b-0 md:border-r border-gray-100 shadow-sm md:shadow-none shrink-0' : 'w-full'}`}>
 
-                    {/* Header */}
-                    <div className="p-5 border-b border-gray-50 flex justify-between items-start shrink-0">
-                        <div>
+                    {/* Header with Centered Total */}
+                    <div className="p-5 md:p-8 border-b border-gray-50 flex flex-col items-center relative shrink-0 min-h-[120px] justify-center">
+                        {/* 1. Left: Session Info */}
+                        <div className="absolute left-5 md:left-8 top-1/2 -translate-y-1/2 text-left max-w-[35%]">
                             <div className="flex items-center gap-2 mb-1">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${step === 'verify' ? 'bg-[#C2A383] text-white' : 'bg-green-100 text-green-700'}`}>
-                                    {step === 'verify' ? 'Bước 1: Chốt Giờ' : 'Bước 2: Thanh Toán'}
+                                <span className={`px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-wider ${step === 'verify' ? 'bg-[#C2A383] text-white' : 'bg-green-500 text-white'}`}>
+                                    {step === 'verify' ? 'GIỜ' : 'TIỀN'}
                                 </span>
                             </div>
-                            <h2 className="text-xl md:text-2xl font-black text-[#4B3621] uppercase tracking-tighter truncate max-w-[200px] md:max-w-[280px]">{table.name}</h2>
-                            <p className="text-xs font-bold text-[#C2A383]">{table.guestName || "Khách vãng lai"}</p>
+                            <h2 className="text-base md:text-xl font-black text-[#4B3621] uppercase truncate leading-tight">{table.name}</h2>
+                            <p className="text-[10px] font-bold text-[#C2A383] truncate">{table.guestName || "Khách"}</p>
                         </div>
-                        <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-colors">
+
+                        {/* 2. Center: Large Prominent Total */}
+                        <div className="text-center animate-fade-in">
+                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] mb-1">Tổng thanh toán</p>
+                            <p className="text-4xl md:text-5xl font-black text-[#4B3621] tracking-tighter leading-none">{formatVND(calculations.totalAmount)}</p>
+                            {calculations.discountAmount > 0 && (
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                    <span className="text-[11px] font-bold text-gray-400 line-through opacity-50">{formatVND(calculations.subTotal)}</span>
+                                    <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded font-black">-{formatVND(calculations.discountAmount)}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 3. Right: Close Button */}
+                        <button onClick={onClose} className="absolute right-5 top-5 w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all">
                             <i className="fas fa-times"></i>
                         </button>
                     </div>
@@ -247,9 +342,62 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                             </div>
                         )}
 
+                        {/* --- DISCOUNT SECTION --- */}
+                        {step === 'verify' && (
+                            <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-[10px]">
+                                            <i className="fas fa-tags"></i>
+                                        </div>
+                                        <span className="text-[11px] font-black text-red-800 uppercase tracking-widest">Giảm giá / Chiết khấu</span>
+                                    </div>
+                                    {calculations.discountAmount > 0 && (
+                                        <span className="text-sm font-black text-red-500">-{formatVND(calculations.discountAmount)}</span>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <div className="flex bg-white rounded-xl border border-red-100 p-1 shrink-0">
+                                        <button
+                                            onClick={() => { setDiscountMode('percent'); setDiscountValue(0); }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${discountMode === 'percent' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'}`}
+                                        >
+                                            %
+                                        </button>
+                                        <button
+                                            onClick={() => { setDiscountMode('amount'); setDiscountValue(0); }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${discountMode === 'amount' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'}`}
+                                        >
+                                            VNĐ
+                                        </button>
+                                    </div>
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="number"
+                                            value={discountValue === 0 ? '' : discountValue}
+                                            onChange={e => {
+                                                let val = Math.max(0, Number(e.target.value));
+                                                if (discountMode === 'percent' && val > 100) val = 100;
+                                                setDiscountValue(val);
+                                            }}
+                                            className="w-full h-full bg-white border border-red-100 rounded-xl px-3 font-bold text-[#4B3621] outline-none focus:border-red-300 placeholder-gray-300 text-right pr-8"
+                                            placeholder={discountMode === 'percent' ? 'Nhập %' : 'Nhập số tiền'}
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">
+                                            {discountMode === 'percent' ? '%' : 'đ'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Total Highlight */}
-                        <div className="py-2 flex justify-between items-end px-2">
+                        <div className="py-2 flex flex-col items-end px-2">
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Tổng thanh toán</span>
+                            {calculations.discountAmount > 0 && (
+                                <span className="text-sm font-bold text-gray-400 line-through mr-1">{formatVND(calculations.subTotal)}</span>
+                            )}
                             <span className="text-4xl font-black text-[#C2A383] tracking-tighter leading-none">{formatVND(calculations.totalAmount)}</span>
                         </div>
                     </div>

@@ -146,7 +146,7 @@ public class BilliardController : ControllerBase
     public async Task<IActionResult> Checkout(int tableId, [FromBody] BilliardCheckoutRequest request)
     {
         Console.WriteLine($"[Checkout] INITIATED for Table {tableId}");
-        Console.WriteLine($"[Checkout] Request Data: Method={request.PaymentMethod}, Start={request.FinalStartTime}, End={request.FinalEndTime}");
+        Console.WriteLine($"[Checkout] Request: Method={request.PaymentMethod}, Discount={request.Discount}, Start={request.FinalStartTime}, End={request.FinalEndTime}");
 
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
@@ -179,7 +179,8 @@ public class BilliardController : ControllerBase
                 CreatedAt = finalEndTime,
                 BilliardSessionId = session?.Id,
                 OrderId = order?.Id,
-                IdentifyString = $"{table?.Name ?? "Table " + tableId} ({finalEndTime.ToLocalTime():yyyy-MM-dd HH:mm})"
+                IdentifyString = $"{table?.Name ?? "Table " + tableId} ({finalEndTime.ToLocalTime():yyyy-MM-dd HH:mm})",
+                Discount = request.Discount
             };
 
             // 1. Process Session & Time Fee
@@ -236,10 +237,12 @@ public class BilliardController : ControllerBase
             order.PaymentMethod = request.PaymentMethod;
             order.PaymentAmount = request.PaymentAmount;
             order.TotalAmount = order.Items.Sum(i => i.Price * i.Quantity); // Re-sum to include time fee
+            order.Discount = request.Discount; // NEW: Save discount to order for history view
 
             // 5. Create Invoice (Mirroring the Unified Order)
             invoice.OrderId = order.Id;
-            invoice.TotalAmount = order.TotalAmount; // Sync with Order
+            invoice.TotalAmount = order.TotalAmount - request.Discount; // Apply Discount
+            if (invoice.TotalAmount < 0) invoice.TotalAmount = 0; // Prevent negative
             
             // Add items to Invoice for historical record (Invoice table)
             foreach (var item in order.Items)
@@ -250,7 +253,7 @@ public class BilliardController : ControllerBase
                     Quantity = item.Quantity,
                     UnitPrice = item.Price,
                     TotalPrice = item.Price * item.Quantity,
-                    Type = item.ProductName.Contains("Tiền giờ") ? "TIME_FEE" : "MENU_ITEM"
+                    Type = (item.ProductName != null && item.ProductName.Contains("Tiền giờ")) ? "TIME_FEE" : "MENU_ITEM"
                 });
             }
 
@@ -265,13 +268,21 @@ public class BilliardController : ControllerBase
                 table.GuestName = null;
             }
 
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
+            Console.WriteLine($"[Checkout] Order ID: {order.Id}, Total: {order.TotalAmount}, Disc: {order.Discount}");
+            Console.WriteLine($"[Checkout] Invoice ID: {invoice.Id}, Items: {invoice.Items.Count}");
 
+            await _context.SaveChangesAsync();
+            Console.WriteLine("[Checkout] SaveChanges SUCCESSFUL");
+            
+            await transaction.CommitAsync();
+            Console.WriteLine("[Checkout] Transaction COMMITTED");
+            
             return Ok(invoice);
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[Checkout] FATAL ERROR: {ex.Message}");
+            if (ex.InnerException != null) Console.WriteLine($"[Checkout] INNER: {ex.InnerException.Message}");
             await transaction.RollbackAsync();
             return StatusCode(500, "Lỗi thanh toán: " + ex.Message);
         }
@@ -298,7 +309,7 @@ public class BilliardController : ControllerBase
 public class StartBilliardRequest
 {
     public int TableId { get; set; }
-    public string GuestName { get; set; }
+    public required string GuestName { get; set; }
     public int NumPeople { get; set; }
     public decimal PricePerHour { get; set; }
     public DateTime? StartTime { get; set; }
@@ -338,4 +349,5 @@ public class BilliardCheckoutRequest
     public decimal? PaymentAmount { get; set; }
     public DateTime? FinalStartTime { get; set; }
     public DateTime? FinalEndTime { get; set; }
+    public decimal Discount { get; set; } = 0;
 }

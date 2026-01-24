@@ -148,8 +148,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({
             )}
 
             <div className={`flex flex-col ${onSwitchToAdmin || onBackToTableList ? 'hidden sm:flex' : ''}`}>
-              <h1 className="text-white text-xs font-black tracking-widest uppercase leading-none italic">The Com Cafe</h1>
-              <p className="text-[#C2A383] text-[7px] font-bold uppercase tracking-[0.2em] mt-1">Sabor de Vietnam</p>
+              <h1 className="text-white text-xs font-black tracking-widest uppercase leading-none italic">Bống Cafe Sân Vườn-Billiard</h1>
+              <p className="text-[#C2A383] text-[7px] font-bold uppercase tracking-[0.2em] mt-1">Rất hân hạnh được phục vụ quý khách</p>
               {billiardSession && (
                 <div className="mt-1 bg-emerald-500/20 border border-emerald-500/50 text-emerald-600 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center w-fit animate-fade-in shadow-sm">
                   <i className="fas fa-stopwatch mr-1.5"></i> {durationStr}

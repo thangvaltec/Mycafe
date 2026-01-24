@@ -20,7 +20,7 @@ const AdminKitchen: React.FC<AdminKitchenProps> = ({ orders, tables, onUpdateOrd
     // Group items by "Ticket" or just list all items?
     // Ticket style is better.
 
-    const activeOrders = orders.filter(o => o.status !== OrderStatus.PAID && o.status !== 'COMPLETED' && o.status !== 'CANCELLED')
+    const activeOrders = orders.filter(o => o.status !== OrderStatus.PAID && o.status !== OrderStatus.CANCELLED)
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     const handleStatusChange = async (order: Order, status: string) => {

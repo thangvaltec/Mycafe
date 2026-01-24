@@ -47,6 +47,7 @@ export interface Order {
   paymentMethod?: PaymentMethod;
   paymentAmount?: number;
   changeAmount?: number;
+  discountAmount?: number;
 }
 
 export interface Table {

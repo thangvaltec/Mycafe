@@ -248,26 +248,36 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   ))}
                 </div>
               </div>
+            </div>
 
-              <div className="bg-[#FAF9F6] p-6 md:p-8 rounded-[40px] space-y-4 md:space-y-6 border border-gray-100">
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 md:gap-0">
-                  <span className="text-[10px] md:text-sm font-bold text-gray-400 uppercase tracking-widest">Tổng hóa đơn:</span>
-                  <span className="text-[#4B3621] font-black text-2xl md:text-lg">{formatVND(viewingHistoryOrder.totalAmount)}đ</span>
+            <div className="p-10 pt-0 shrink-0">
+              <div className="bg-[#FAF9F6] p-8 rounded-[40px] space-y-4 border border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">TỔNG HÓA ĐƠN:</span>
+                  <span className="text-2xl font-black text-[#4B3621]">{formatVND(viewingHistoryOrder.totalAmount)}đ</span>
                 </div>
-                <div className="h-px w-full border-b border-dashed border-gray-200"></div>
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 md:gap-0">
-                  <span className="text-[10px] md:text-sm font-bold text-gray-400 uppercase tracking-widest">Khách đã đưa ({getMethodLabel(viewingHistoryOrder.paymentMethod)}):</span>
-                  <span className="text-[#4B3621] font-black text-2xl md:text-lg">{formatVND(viewingHistoryOrder.paymentAmount || 0)}đ</span>
+
+                {viewingHistoryOrder.discountAmount && viewingHistoryOrder.discountAmount > 0 ? (
+                  <div className="flex justify-between items-center py-2 border-y border-dashed border-gray-200">
+                    <span className="text-red-400 font-bold text-[10px] uppercase tracking-widest">GIẢM GIÁ / CHIẾT KHẤU:</span>
+                    <span className="text-lg font-black text-red-500">-{formatVND(viewingHistoryOrder.discountAmount)}đ</span>
+                  </div>
+                ) : null}
+
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">THỰC THU ({viewingHistoryOrder.paymentMethod === PaymentMethod.CASH ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN'}):</span>
+                  <span className="text-3xl font-black text-emerald-600">{formatVND(viewingHistoryOrder.totalAmount - (viewingHistoryOrder.discountAmount || 0))}đ</span>
                 </div>
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 md:gap-0">
-                  <span className="text-[10px] md:text-sm font-bold text-gray-400 uppercase tracking-widest">Tiền thừa trả khách:</span>
-                  <span className="text-emerald-600 font-black text-3xl md:text-2xl">{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
+
+                <div className="flex justify-between items-center opacity-40">
+                  <span className="text-gray-400 font-bold text-[9px] uppercase tracking-widest">TIỀN THỪA TRẢ KHÁCH:</span>
+                  <span className="text-lg font-black text-emerald-600">{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
                 </div>
               </div>
             </div>
 
             <div className="p-10 pt-0">
-              <button onClick={() => setViewingHistoryOrder(null)} className="w-full bg-[#4B3621] text-white py-6 rounded-[28px] font-black uppercase text-xs tracking-[0.2em] shadow-xl">ĐÓNG CHI TIẾT</button>
+              <button onClick={() => setViewingHistoryOrder(null)} className="w-full py-6 bg-[#4B3621] text-white rounded-[24px] font-black text-sm uppercase tracking-[0.2em] shadow-xl transform active:scale-[0.98] transition-all">Đóng chi tiết</button>
             </div>
           </div>
         </div>

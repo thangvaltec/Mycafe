@@ -269,7 +269,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
             )}
 
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter">Quản lý Bida</h1>
+                <h1 className="text-3xl md:text-2xl font-black text-[#4B3621] uppercase tracking-tighter">Quản lý Bida</h1>
                 <div className="flex items-center gap-4">
                     <button
                         onClick={async () => {
@@ -283,8 +283,8 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                     >
                         <i className={`fas fa-sync-alt ${isLoading ? 'animate-spin' : ''}`}></i>
                     </button>
-                    <div className="text-sm font-bold text-gray-400">
-                        {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    <div className="text-sm font-bold text-gray-400 capitalize">
+                        {new Date().toLocaleDateString('vi-VN', { weekday: 'long' })}, {new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                 </div>
             </div>

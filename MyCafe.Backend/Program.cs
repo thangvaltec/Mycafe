@@ -5,6 +5,10 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Render/Heroku dynamic port binding
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5238";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // Add services to the container.
 builder.Services.AddControllers();
 
@@ -21,41 +25,31 @@ builder.Services.AddCors(options =>
 // Configure PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    var connString = builder.Configuration.GetConnectionString("DefaultConnection");
-    
-    // Parse Render/Heroku style URL: postgres://user:password@host:port/database
-    // Parse Render/Heroku style URL: postgres://user:password@host:port/database
-    if (connString != null)
+    var connString = Environment.GetEnvironmentVariable("DATABASE_URL")
+                     ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+    if (string.IsNullOrEmpty(connString))
     {
-        Console.WriteLine($"[DB] Connection String found: {connString.Substring(0, Math.Min(connString.Length, 15))}...");
-        
-        if (connString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || 
-            connString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        // Fallback for empty/null connection string during local development
+        connString = "Host=localhost;Database=postgres"; 
+    }
+
+    if (connString.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        var uri = new Uri(connString);
+        var userInfo = uri.UserInfo.Split(':');
+
+        var connBuilder = new Npgsql.NpgsqlConnectionStringBuilder
         {
-            Console.WriteLine("[DB] Detected URI format. Parsing...");
-            try 
-            {
-                var databaseUri = new Uri(connString);
-                var userInfo = databaseUri.UserInfo.Split(':');
-                var port = databaseUri.Port > 0 ? databaseUri.Port : 5432;
-                var builder = new Npgsql.NpgsqlConnectionStringBuilder
-                {
-                    Host = databaseUri.Host,
-                    Port = port,
-                    Username = userInfo[0],
-                    Password = userInfo[1],
-                    Database = databaseUri.LocalPath.TrimStart('/'),
-                    SslMode = Npgsql.SslMode.Prefer,
-                    TrustServerCertificate = true 
-                };
-                connString = builder.ToString();
-                Console.WriteLine($"[DB] Successfully parsed URI. Host: {databaseUri.Host}, Port: {port}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error parsing connection URL: {ex.Message}");
-            }
-        }
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = userInfo[0],
+            Password = userInfo[1],
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = Npgsql.SslMode.Require,
+            TrustServerCertificate = true
+        };
+        connString = connBuilder.ToString();
     }
 
     options.UseNpgsql(connString);
@@ -89,13 +83,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             var db = services.GetRequiredService<AppDbContext>();
             // db.Database.EnsureDeleted(); // RESET DB REQUESTED
             // db.Database.Migrate(); // Manual migration via CLI to avoid conflicts
-            // db.Database.EnsureCreated();
+            db.Database.EnsureCreated();
             
             try 
             {
+               Console.WriteLine("[SCHEMA PATCH] Attempting to add discount_amount...");
                db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number SERIAL;");
+               db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
+               Console.WriteLine("[SCHEMA PATCH] Success!");
             } 
-            catch { /* Ignore if fails or column exists */ }
+            catch (Exception ex) { Console.WriteLine($"[SCHEMA PATCH ERROR] {ex.Message}"); }
 
             // PATCH: Create billiard_sessions table for existing databases
             try

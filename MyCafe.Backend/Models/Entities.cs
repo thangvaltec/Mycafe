@@ -143,6 +143,9 @@ public class Order
     [Column("change_amount")]
     public decimal? ChangeAmount { get; set; }
 
+    [Column("discount_amount")]
+    public decimal Discount { get; set; } = 0;
+
     public List<OrderItem> Items { get; set; } = new();
 }
 
@@ -288,6 +291,9 @@ public class Invoice
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("discount")]
+    public decimal Discount { get; set; } = 0;
 
     public List<InvoiceItem> Items { get; set; } = new();
 }

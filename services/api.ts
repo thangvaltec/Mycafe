@@ -1,6 +1,8 @@
 import { Category, Expense, Product, Order, PaymentMethod, Table, BilliardSession } from '../types';
 
-export const API_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://192.168.0.30:5238/api'; // Use env var for Prod, fallback to IP for Dev
+// AUTO-DETECT IP: Uses the same IP that the user is currently accessing the web from.
+// Assuming Backend runs on the same machine but on port 5238.
+export const API_URL = ((import.meta as any).env.VITE_API_URL as string) || `http://${window.location.hostname}:5238/api`;
 
 // --- Helper ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
@@ -118,10 +120,11 @@ export const api = {
         }),
 
     // Payment
-    checkout: (tableIdOrOrderId: string | number, paymentMethod: PaymentMethod, receivedAmount: number, isOrderId: boolean = false) => {
+    checkout: (tableIdOrOrderId: string | number, paymentMethod: PaymentMethod, receivedAmount: number, isOrderId: boolean = false, discount: number = 0) => {
         const body: any = {
             paymentMethod,
-            receivedAmount
+            receivedAmount,
+            discount
         };
 
         if (isOrderId) {
@@ -137,8 +140,8 @@ export const api = {
         });
     },
     // Alias for explicit order checkout
-    checkoutOrder: (orderId: string | number, paymentMethod: PaymentMethod, receivedAmount: number) => {
-        return api.checkout(orderId, paymentMethod, receivedAmount, true);
+    checkoutOrder: (orderId: string | number, paymentMethod: PaymentMethod, receivedAmount: number, discount: number = 0) => {
+        return api.checkout(orderId, paymentMethod, receivedAmount, true, discount);
     },
 
     // Reports & Expenses
@@ -184,11 +187,11 @@ export const api = {
     // Unified Billing
     getBill: (tableId: number) => fetchApi<any>(`/billiard/${tableId}/bill`),
     // Unified Checkout with Manual Adjustment Support
-    billiardCheckout: async (tableId: number, paymentMethod: string, paymentAmount?: number, finalStartTime?: string, finalEndTime?: string) => {
+    billiardCheckout: async (tableId: number, paymentMethod: string, paymentAmount?: number, finalStartTime?: string, finalEndTime?: string, discount?: number) => {
         const res = await fetch(`${API_URL}/billiard/${tableId}/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentMethod, paymentAmount, finalStartTime, finalEndTime })
+            body: JSON.stringify({ paymentMethod, paymentAmount, finalStartTime, finalEndTime, discount })
         });
         if (!res.ok) throw new Error(await res.text());
         return res.json();

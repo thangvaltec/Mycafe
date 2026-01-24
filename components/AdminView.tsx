@@ -52,7 +52,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const revenue = orders.filter(o => {
     if (o.status !== OrderStatus.PAID) return false;
     return new Date(o.createdAt).toDateString() === new Date().toDateString();
-  }).reduce((acc, b) => acc + b.totalAmount, 0);
+  }).reduce((acc, b) => acc + (b.totalAmount - (b.discountAmount || 0)), 0);
 
   const handleOpenOrderView = (table: Table | { id: string, name: string, guestName?: string }) => {
     setCurrentOrderingTable(table);
@@ -116,18 +116,18 @@ const AdminView: React.FC<AdminViewProps> = ({
       {/* Sidebar Nav */}
       <nav className="fixed bottom-0 left-0 right-0 h-16 lg:h-screen lg:w-24 xl:w-72 bg-[#1A1A19] text-white flex lg:flex-col lg:relative z-[100] shadow-2xl">
         <div className="hidden lg:flex flex-col items-center xl:items-start gap-4 p-8 w-full border-b border-white/5">
-          <div className="w-12 h-12 bg-[#C2A383] rounded-2xl flex items-center justify-center text-[#4B3621] text-2xl font-black">H</div>
+          <div className="w-12 h-12 bg-[#C2A383] rounded-2xl flex items-center justify-center text-[#4B3621] text-2xl font-black">B</div>
           <div className="hidden xl:block">
-            <h1 className="font-black text-lg leading-none tracking-tighter">Com Cafe</h1>
+            <h1 className="font-black text-base leading-none tracking-tighter">Bống Cafe Sân Vườn-Billiard</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Hệ thống quản trị</p>
           </div>
         </div>
         <div className="flex flex-1 justify-around lg:flex-col lg:justify-start lg:p-2 gap-1 lg:gap-1 w-full overflow-y-auto custom-scrollbar">
           {[
-            { id: 'pos', icon: 'fa-table-cells', label: 'Phục vụ' },
+            { id: 'pos', icon: 'fa-table-cells', label: 'Order' },
             { id: 'takeaway', icon: 'fa-bag-shopping', label: 'Mang về' },
             { id: 'billiard', icon: 'fa-circle-dot', label: 'Bida' },
-            { id: 'orders', icon: 'fa-receipt', label: 'Đơn hàng' },
+            { id: 'orders', icon: 'fa-receipt', label: 'Hóa đơn' },
             { id: 'menu', icon: 'fa-mug-hot', label: 'Thực đơn' },
             { id: 'expenses', icon: 'fa-wallet', label: 'Chi phí' },
             { id: 'report', icon: 'fa-chart-pie', label: 'Báo cáo' }

@@ -2,17 +2,21 @@ import React, { useState, useEffect } from 'react';
 import {
   Table, Product, Order, OrderStatus, Category, Expense, UserRole, OrderItem
 } from './types';
+import { authUtils } from './utils/auth';
 import { api } from './services/api';
 import AdminView from './components/AdminView';
 import CustomerView from './components/CustomerView';
 
 const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
+
+  const [isLoggedIn, setIsLoggedIn] = useState(authUtils.isValidSession);
   const [role, setRole] = useState<UserRole>(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('tableId')) return 'CUSTOMER';
     return (localStorage.getItem('userRole') as UserRole) || 'CUSTOMER';
   });
+
+  // ... (Other state hooks remain same) ...
   const [selectedTableId, setSelectedTableId] = useState<string>(() => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('tableId') || '';
@@ -64,9 +68,29 @@ const App: React.FC = () => {
       setIsQRCodeAccess(true);
     }
 
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
+    // Session Auto-Check Interval
+    const sessionCheckInterval = setInterval(() => {
+      if (isLoggedIn && !authUtils.isValidSession()) {
+        setIsLoggedIn(false);
+        setRole('CUSTOMER');
+        window.location.reload();
+      }
+    }, 60000); // Check every minute
+
+    if (isLoggedIn) {
+      loadData();
+    } else {
+      setIsLoading(false); // If not logged in & not table, stop loading
+    }
+
+    const interval = setInterval(() => {
+      if (isLoggedIn) loadData();
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(sessionCheckInterval);
+    }
   }, [isLoggedIn]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -74,8 +98,7 @@ const App: React.FC = () => {
     try {
       const res = await api.login(username, password);
       if (res.token) {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', res.role);
+        authUtils.login(res.role);
         setIsLoggedIn(true);
         setRole(res.role as UserRole);
       } else {
@@ -87,8 +110,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userRole');
+    authUtils.logout();
     setIsLoggedIn(false);
     setRole('CUSTOMER');
     window.location.reload(); // Optional: clean reload
@@ -192,38 +214,61 @@ const App: React.FC = () => {
 
   if (showLogin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm border border-[#C2A383]/20">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 relative overflow-hidden">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: "url('/images/login-bg.jpg')" }} // User Uploaded Anime Style
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+        </div>
+
+        {/* Login Card */}
+        <div className="bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-white/20 relative z-10 transition-all hover:shadow-cyan-500/10 hover:scale-[1.01] duration-500">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter">Com Cafe</h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">Hệ thống quản trị</p>
+            <h1 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter drop-shadow-sm">Bống Cafe Sân Vườn-Billiard</h1>
+            <p className="text-[10px] text-[#8C6B4F] font-bold uppercase tracking-[0.3em] mt-2">Hệ thống quản trị</p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Tài khoản</label>
-              <input
-                type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 font-bold text-[#4B3621] outline-none focus:border-[#C2A383]"
-                placeholder="admin"
-              />
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Tài khoản</label>
+              <div className="relative group">
+                <i className="fas fa-user absolute left-4 top-3.5 text-gray-400 group-focus-within:text-[#C2A383] transition-colors"></i>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 font-bold text-[#4B3621] outline-none focus:border-[#C2A383] focus:bg-white transition-all shadow-inner"
+                  placeholder="Tên đăng nhập"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Mật khẩu</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 font-bold text-[#4B3621] outline-none focus:border-[#C2A383]"
-                placeholder="******"
-              />
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Mật khẩu</label>
+              <div className="relative group">
+                <i className="fas fa-lock absolute left-4 top-3.5 text-gray-400 group-focus-within:text-[#C2A383] transition-colors"></i>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 font-bold text-[#4B3621] outline-none focus:border-[#C2A383] focus:bg-white transition-all shadow-inner"
+                  placeholder="******"
+                />
+              </div>
             </div>
-            {loginError && <p className="text-red-500 text-xs font-bold text-center">{loginError}</p>}
-            <button type="submit" className="w-full bg-[#4B3621] text-white py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#C2A383] transition-colors">
+            {loginError && (
+              <div className="bg-red-50 border border-red-100 p-3 rounded-lg flex items-center gap-2 animate-pulse">
+                <i className="fas fa-exclamation-circle text-red-500 text-sm"></i>
+                <p className="text-red-500 text-xs font-bold">{loginError}</p>
+              </div>
+            )}
+            <button type="submit" className="w-full bg-gradient-to-r from-[#4B3621] to-[#6F4E37] text-white py-3.5 rounded-xl font-black uppercase tracking-widest hover:shadow-lg hover:shadow-[#4B3621]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300">
               Đăng nhập
             </button>
           </form>
+          <div className="mt-6 text-center">
+            <p className="text-[9px] text-gray-400 font-medium">© {new Date().getFullYear()} MyCafe System</p>
+          </div>
         </div>
       </div>
     );

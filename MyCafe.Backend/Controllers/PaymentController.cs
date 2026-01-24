@@ -51,31 +51,63 @@ public class PaymentController : ControllerBase
         if (order.Status == "PAID")
             return BadRequest("Đơn hàng đã được thanh toán");
 
+        // Apply Discount Logic
+        decimal discount = request.Discount;
+        decimal finalTotal = order.TotalAmount - discount;
+        if (finalTotal < 0) finalTotal = 0;
+
         decimal change = 0;
         if (request.PaymentMethod == "cash")
         {
-            if (request.ReceivedAmount < order.TotalAmount)
+            if (request.ReceivedAmount < finalTotal)
                 return BadRequest("Số tiền khách đưa chưa đủ");
-            change = request.ReceivedAmount - order.TotalAmount;
+            change = request.ReceivedAmount - finalTotal;
         }
 
         // Update Order
         order.Status = "PAID";
         order.PaymentMethod = request.PaymentMethod;
-        order.PaymentAmount = request.ReceivedAmount; // Or TotalAmount for bank
+        order.PaymentAmount = request.ReceivedAmount; 
         order.ChangeAmount = change;
+        order.Discount = discount; // NEW: Save discount to order for history view
 
-        // Create Payment Record
+        // Create Payment Record (Legacy)
         var payment = new Payment
         {
             OrderId = order.Id,
             PaymentMethod = request.PaymentMethod,
-            Amount = order.TotalAmount,
-            ReceivedAmount = request.PaymentMethod == "cash" ? request.ReceivedAmount : order.TotalAmount,
+            Amount = finalTotal, // Net Revenue
+            ReceivedAmount = request.PaymentMethod == "cash" ? request.ReceivedAmount : finalTotal,
             ChangeAmount = change,
             PaidAt = DateTime.UtcNow
         };
         _context.Payments.Add(payment);
+
+        // Create Invoice Record (New System - Supports Discount Storage)
+        var invoice = new Invoice
+        {
+            TableId = table?.Id ?? 0,
+            OrderId = order.Id,
+            TotalAmount = finalTotal,
+            PaymentMethod = request.PaymentMethod,
+            Discount = discount,
+            IdentifyString = $"{table?.Name ?? "Order " + order.OrderNumber} ({DateTime.Now:HH:mm})",
+            CreatedAt = DateTime.UtcNow
+        };
+        
+        // Copy Items to Invoice
+        foreach (var item in order.Items)
+        {
+            invoice.Items.Add(new InvoiceItem
+            {
+                Name = item.ProductName ?? "Item",
+                Quantity = item.Quantity,
+                UnitPrice = item.Price,
+                TotalPrice = item.Price * item.Quantity,
+                Type = "MENU_ITEM"
+            });
+        }
+        _context.Invoices.Add(invoice);
 
         // Reset Table (if exists)
         if (table != null)
@@ -101,4 +133,5 @@ public class CheckoutRequest
     public Guid? OrderId { get; set; }
     public string PaymentMethod { get; set; } // "cash" or "bank_transfer"
     public decimal ReceivedAmount { get; set; }
+    public decimal Discount { get; set; } = 0;
 }

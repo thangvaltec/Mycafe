@@ -34,31 +34,100 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
     const timeItem = order.items.find(i => i.productId === 'billiard-fee');
     const pricePerHour = timeItem ? (timeItem.price / (timeItem.quantity > 0 ? timeItem.quantity : 1)) : 20000; // Simplified estimation
 
+    // --- DISCOUNT STATE ---
+    const [discountMode, setDiscountMode] = useState<'percent' | 'amount'>('percent');
+    const [discountValue, setDiscountValue] = useState<number>(0);
+    const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+
     // Recalculate Logic
     const calculateNewTotal = () => {
-        if (!isBilliard) return order.totalAmount;
+        let subTotal = order.totalAmount;
 
-        const start = new Date(adjustedStartTime).getTime();
-        const end = new Date(adjustedEndTime).getTime();
-        if (isNaN(start) || isNaN(end) || start >= end) return order.totalAmount;
+        if (isBilliard) {
+            const start = new Date(adjustedStartTime).getTime();
+            const end = new Date(adjustedEndTime).getTime();
+            if (!isNaN(start) && !isNaN(end) && start < end) {
+                const durationHours = (end - start) / (1000 * 60 * 60);
+                const newTimeFee = Math.ceil((durationHours * pricePerHour) / 1000) * 1000;
 
-        const durationHours = (end - start) / (1000 * 60 * 60);
-        const newTimeFee = Math.ceil((durationHours * pricePerHour) / 1000) * 1000;
+                const otherItemsTotal = order.items
+                    .filter(i => i.productId !== 'billiard-fee')
+                    .reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        const otherItemsTotal = order.items
-            .filter(i => i.productId !== 'billiard-fee')
-            .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                subTotal = newTimeFee + otherItemsTotal;
+            }
+        }
 
-        return newTimeFee + otherItemsTotal;
+        // Apply Discount
+        let discountAmt = 0;
+        if (discountValue > 0) {
+            if (discountMode === 'percent') {
+                discountAmt = (subTotal * discountValue) / 100;
+            } else {
+                discountAmt = discountValue;
+            }
+        }
+        if (discountAmt > subTotal) discountAmt = subTotal;
+
+        return Math.max(0, subTotal - discountAmt);
     };
 
     const currentTotal = calculateNewTotal();
+    const calculateDiscountAmount = () => {
+        let base = isBilliard ? (currentTotal + (discountValue > 0 ? (discountMode === 'percent' ? (currentTotal / (1 - discountValue / 100) * discountValue / 100) : discountValue) : 0)) : order.totalAmount;
+        // Logic trap above. Simpler: Re-calculate SubTotal then apply discount.
+        // Let's rely on standard logic:
+        let sub = order.totalAmount; // Default standard
+        if (isBilliard) {
+            const start = new Date(adjustedStartTime).getTime();
+            const end = new Date(adjustedEndTime).getTime();
+            if (!isNaN(start) && !isNaN(end) && start < end) {
+                const durationHours = (end - start) / (1000 * 60 * 60);
+                const newTimeFee = Math.ceil((durationHours * pricePerHour) / 1000) * 1000;
+                const otherItemsTotal = order.items.filter(i => i.productId !== 'billiard-fee').reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                sub = newTimeFee + otherItemsTotal;
+            }
+        }
 
+        if (discountValue <= 0) return 0;
+        if (discountMode === 'percent') return (sub * discountValue) / 100;
+        return Math.min(sub, discountValue);
+    };
+    const discountAmount = calculateDiscountAmount();
+
+
+    const attemptPayment = async (method: PaymentMethod) => {
+        // If Discount > 0, Require Password
+        if (discountAmount > 0) {
+            setShowPasswordPrompt(true);
+            return; // Wait for password
+        }
+        await finalizePayment(method);
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            // Unify with main Admin password (checking against database)
+            const res = await api.login('admin', passwordInput);
+            if (res.token) {
+                setShowPasswordPrompt(false);
+                finalizePayment(activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER);
+            } else {
+                alert("Mật khẩu không đúng!");
+                setPasswordInput('');
+            }
+        } catch (err) {
+            alert("Lỗi xác thực hoặc lỗi kết nối!");
+            setPasswordInput('');
+        }
+    };
 
     const finalizePayment = async (method: PaymentMethod) => {
         if (isSubmitting) return;
         setIsSubmitting(true);
-        const finalReceived = method === PaymentMethod.CASH ? receivedAmount : order.totalAmount;
+        const finalReceived = method === PaymentMethod.CASH ? receivedAmount : currentTotal;
 
         try {
             if (isBilliard) {
@@ -70,22 +139,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                         method,
                         finalReceived,
                         adjustedStartTime,
-                        adjustedEndTime
+                        adjustedEndTime,
+                        discountAmount // Pass Discount
                     );
                 }
             } else {
                 // Service View / Regular Order Checkout
                 if (onProcessPayment) {
-                    await onProcessPayment(method, finalReceived);
+                    await onProcessPayment(method, finalReceived); // Add discount params if needed in callback interface?
+                    // Assuming onProcessPayment for Standard DOES NOT support discount yet if it's external.
+                    // But standard `adminPOS` uses `checkoutOrder` inside usually? No, `AdminPOS.tsx` uses `api.billiardCheckout`? 
+                    // No, `AdminPOS.tsx` sets `CheckoutModal`. `CheckoutModal` calls `api.checkoutOrder` (line 82).
                 } else {
                     // Use correct API for regular orders
-                    await api.checkoutOrder(order.id, method, finalReceived);
+                    await api.checkoutOrder(order.id, method, finalReceived, discountAmount);
                 }
             }
             onSuccess();
         } catch (err: any) {
             alert('❌ Lỗi thanh toán: ' + (err.message || err));
             setIsSubmitting(false);
+            setShowPasswordPrompt(false);
         }
     };
 
@@ -139,23 +213,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                 <div className={`w-full md:w-[55%] bg-[#FAF9F6] flex flex-col border-b md:border-b-0 md:border-r border-[#D4A373]/10 relative transition-all duration-300 shrink-0 ${showFullBill ? 'max-h-[60%] shadow-xl z-20' : 'max-h-[100px] md:max-h-full'}`}>
 
                     {/* Header Summary (Clickable on Mobile) */}
-                    <div className="p-5 md:p-8 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center cursor-pointer md:cursor-default active:bg-black/5 md:active:bg-transparent transition-colors border-b border-[#D4A373]/10" onClick={() => setShowFullBill(!showFullBill)}>
-                        <div className="flex-1 mb-2 md:mb-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <p className="text-[10px] font-black text-[#C2A383] uppercase tracking-[0.2em]">Hóa đơn</p>
-                                <i className={`fas fa-chevron-down text-[#C2A383] text-xs md:hidden transition-transform ${showFullBill ? 'rotate-180' : ''}`}></i>
+                    <div className="p-5 md:p-8 shrink-0 flex flex-col items-center relative cursor-pointer active:bg-black/5 transition-colors border-b border-[#D4A373]/10 min-h-[110px]" onClick={() => setShowFullBill(!showFullBill)}>
+                        {/* 1. Left: Order Info */}
+                        <div className="absolute left-5 md:left-8 top-1/2 -translate-y-1/2 text-left max-w-[35%]">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <p className="text-[9px] font-black text-[#C2A383] uppercase tracking-widest">Hóa đơn</p>
+                                <i className={`fas fa-chevron-down text-[#C2A383] text-[9px] md:hidden transition-transform ${showFullBill ? 'rotate-180' : ''}`}></i>
                             </div>
-                            <h2 className="text-xl md:text-2xl font-black text-[#4B3621] tracking-tighter uppercase truncate pr-4">{table?.name || 'Khách Vãng Lai'}</h2>
-                            {/* Display Guest Name if available, otherwise just order info */}
-                            {(table as any)?.guestName && <p className="text-sm font-bold text-[#C2A383]">{(table as any).guestName}</p>}
-                            <p className="text-[10px] md:text-xs font-bold text-gray-400 mt-1">Order #{order.orderNumber || order.id.slice(-4)}</p>
+                            <h2 className="text-base md:text-xl font-black text-[#4B3621] uppercase truncate leading-tight">{table?.name || 'Khách'}</h2>
+                            <p className="text-[9px] font-bold text-gray-400 truncate opacity-70">Order #{order.orderNumber || order.id.slice(-4)}</p>
                         </div>
 
-                        {/* Center Total Amount as requested */}
-                        <div className="text-right md:text-center flex flex-col justify-center">
-                            <p className="text-[10px] uppercase text-gray-400 font-bold mb-1 md:hidden">Tổng cộng</p>
-                            <p className="text-3xl md:text-4xl font-black text-[#4B3621] tracking-tighter">{formatVND(currentTotal)}</p>
-                            {currentTotal !== order.totalAmount && <p className="text-[10px] text-gray-400 line-through">{formatVND(order.totalAmount)}</p>}
+                        {/* 2. Center: Total Amount (THE FOCUS) */}
+                        <div className="text-center flex flex-col justify-center animate-fade-in">
+                            <p className="text-[10px] uppercase text-[#C2A383] font-black tracking-[0.2em] mb-1">Cần thanh toán</p>
+                            <p className="text-4xl md:text-5xl font-black text-[#4B3621] tracking-tighter leading-none">{formatVND(currentTotal)}</p>
+                            {discountAmount > 0 && (
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                    <span className="text-[10px] font-bold text-gray-400 line-through opacity-50">{formatVND(currentTotal + discountAmount)}</span>
+                                    <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded font-black">-{formatVND(discountAmount)}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -239,6 +317,56 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                             </div>
                         </div>
                     )}
+
+                    {/* --- DISCOUNT SECTION --- */}
+                    <div className="p-6 bg-red-50/50 border-t border-red-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-[10px]">
+                                    <i className="fas fa-tags"></i>
+                                </div>
+                                <span className="text-[11px] font-black text-red-800 uppercase tracking-widest">Giảm giá / Chiết khấu</span>
+                            </div>
+                            <div className="flex bg-white rounded-lg p-0.5 border border-red-100 shadow-sm">
+                                <button
+                                    onClick={() => { setDiscountMode('percent'); setDiscountValue(0); }}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${discountMode === 'percent' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:text-red-500'}`}
+                                >
+                                    %
+                                </button>
+                                <button
+                                    onClick={() => { setDiscountMode('amount'); setDiscountValue(0); }}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${discountMode === 'amount' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:text-red-500'}`}
+                                >
+                                    VNĐ
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex gap-4 items-center">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={discountMode === 'percent' ? discountValue : formatVND(discountValue)}
+                                    onChange={(e) => {
+                                        const rawVal = e.target.value.replace(/\D/g, '');
+                                        let val = rawVal ? parseInt(rawVal) : 0;
+                                        if (discountMode === 'percent' && val > 100) val = 100;
+                                        setDiscountValue(val);
+                                    }}
+                                    className="w-full bg-white border border-red-100 rounded-xl px-4 py-2 font-black text-red-800 focus:border-red-300 outline-none text-right"
+                                    placeholder="0"
+                                />
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] text-red-300 font-bold">
+                                    {discountMode === 'percent' ? 'Mức giảm (%)' : 'Số tiền (đ)'}
+                                </span>
+                            </div>
+                            <div className="text-right min-w-[80px]">
+                                <p className="text-[9px] font-bold text-red-300 uppercase">Được giảm</p>
+                                <p className="text-lg font-black text-red-500">-{formatVND(discountAmount)}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* RIGHT COLUMN: PAYMENT ACTIONS */}
@@ -335,7 +463,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                         {/* Added pb-8 md:pb-8 for extra bottom breathing room, essential for Safari mobile */}
                         <div className="p-5 md:p-8 pt-4 mt-auto shrink-0 bg-white border-t border-gray-50 pb-12 md:pb-8">
                             <button
-                                onClick={() => finalizePayment(activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER)}
+                                onClick={() => attemptPayment(activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER)}
                                 disabled={isSubmitting || (activeTab === 'cash' && receivedAmount < currentTotal)}
                                 className={`w-full py-5 rounded-[20px] font-black text-sm uppercase tracking-[0.2em] shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-3
                                 ${activeTab === 'cash'
@@ -357,6 +485,35 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                     </div>
                 </div>
             </div>
+
+            {/* PASSWORD MODAL OVERLAY */}
+            {showPasswordPrompt && (
+                <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl scale-100 animate-scale-in">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                <i className="fas fa-lock"></i>
+                            </div>
+                            <h3 className="text-xl font-black text-[#4B3621] uppercase">Xác nhận giảm giá</h3>
+                            <p className="text-sm text-gray-500 mt-2">Vui lòng nhập mật khẩu Admin để áp dụng mức giảm <b>{formatVND(discountAmount)}</b></p>
+                        </div>
+                        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                            <input
+                                autoFocus
+                                type="password"
+                                value={passwordInput}
+                                onChange={e => setPasswordInput(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center font-bold text-[#4B3621] outline-none focus:border-[#C2A383]"
+                                placeholder="Nhập mật khẩu..."
+                            />
+                            <div className="flex gap-3">
+                                <button type="button" onClick={() => setShowPasswordPrompt(false)} className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold uppercase text-xs hover:bg-gray-200">Hủy</button>
+                                <button type="submit" className="flex-1 py-3 bg-[#4B3621] text-white rounded-xl font-bold uppercase text-xs hover:bg-[#3E2C1B]">Xác nhận</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
