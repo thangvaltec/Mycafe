@@ -171,7 +171,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
             )}
             <div className="bg-[#C2A383] px-3 py-1.5 rounded-xl flex flex-col items-center min-w-[50px] shadow-lg">
               <span className="text-[#4B3621]/40 text-[6px] font-black uppercase tracking-widest leading-none">BÀN</span>
-              <span className="text-[#4B3621] text-sm font-black leading-none mt-0.5">{table.name.split(' ')[1] || table.name}</span>
+              <span className="text-[#4B3621] text-sm font-black leading-none mt-0.5">{table.name.replace('Bàn ', '')}</span>
             </div>
           </div>
         </header>

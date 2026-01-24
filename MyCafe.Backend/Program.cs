@@ -126,16 +126,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             // 2. Seed Initial Tables (Fixed Configuration: 4 Billiard, 10 Cafe, 1 Takeaway)
             
             // A. Billiard Tables (BI-01 to BI-04) - "4 ban bia"
-            if (!db.Tables.Any(t => t.Alias == "Bi-a"))
+            for (int i = 1; i <= 4; i++)
             {
-                var tables = new List<Table>();
-                for (int i = 1; i <= 4; i++)
+                var num = $"BI-{i:00}";
+                var t = db.Tables.FirstOrDefault(x => x.TableNumber == num);
+                if (t == null)
                 {
-                    tables.Add(new Table { TableNumber = $"BI-{i:00}", Name = $"Bàn Bida {i:00}", Status = "Empty", Alias = "Bi-a" });
+                    db.Tables.Add(new Table { TableNumber = num, Name = $"Bida {i}", Status = "Empty", Alias = "Bi-a" });
                 }
-                db.Tables.AddRange(tables);
-                Console.WriteLine("✅ Added 4 Billiard Tables");
+                else
+                {
+                    t.Name = $"Bida {i}";
+                    t.Alias = "Bi-a";
+                }
             }
+            Console.WriteLine("✅ Verified 4 Billiard Tables");
 
             // B. Cafe Tables (01 to 10) - "1 den 10 ban cafe"
             if (!db.Tables.Any(t => t.TableNumber == "01" && t.Alias == "Cafe"))
