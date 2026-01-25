@@ -56,7 +56,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         connString = connBuilder.ToString();
     }
 
-    options.UseNpgsql(connString);
+    options.UseNpgsql(connString, npgsqlOptions => {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null
+        );
+    });
 });
 
     // Configure Swagger
@@ -106,7 +112,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                 
                 // Patch for missing columns from older versions
                 db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
+                db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
                 db.Database.ExecuteSqlRaw("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount DECIMAL(18,2) DEFAULT 0;");
+                
+                // Fix: Sanitize inconsistent table states on startup (Ghost Occupied Tables)
+                db.Database.ExecuteSqlRaw("UPDATE tables SET is_occupied = false, status = 'Empty' WHERE current_order_id IS NULL AND is_occupied = true;");
+                
                 Console.WriteLine("[DB INIT] Schema verified.");
             } 
             catch (Exception ex) { Console.WriteLine($"[DB INIT ERROR] {ex.Message}"); }
@@ -152,7 +163,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                 // Simpler: Just add if missing. If collision on TableNumber (unique constraint?), we might fail.
                 // Assuming empty DB or clean state as user said "ngay tu ban dau".
                 // But for robust patching:
-                for (int i = 1; i <= 10; i++)
+                for (int i = 1; i <= 18; i++)
                 {
                     var num = $"{i:00}";
                     if (!db.Tables.Any(t => t.TableNumber == num))
@@ -160,7 +171,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                         db.Tables.Add(new Table { TableNumber = num, Name = $"Bàn {i}", Status = "Empty", Alias = "Cafe" });
                     }
                 }
-                Console.WriteLine("✅ Verified 10 Cafe Tables");
+                Console.WriteLine("✅ Verified 18 Cafe Tables");
             }
 
             // C. Takeaway Table (11) - "ban 11 la mang ve"

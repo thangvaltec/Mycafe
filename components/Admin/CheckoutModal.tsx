@@ -434,7 +434,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                                 <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 flex justify-between items-center">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Tiền thừa trả khách</span>
-                                        <span className="text-2xl font-black text-emerald-600">{formatVND(Math.max(0, receivedAmount - order.totalAmount))}</span>
+                                        <span className="text-2xl font-black text-emerald-600">{formatVND(Math.max(0, receivedAmount - currentTotal))}</span>
                                     </div>
                                     <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
                                         <i className="fas fa-hand-holding-usd"></i>
