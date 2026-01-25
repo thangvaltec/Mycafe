@@ -49,8 +49,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             SslMode = Npgsql.SslMode.Require,
             // Smart Configuration for Supabase
             // Port 6543 = Transaction Mode (No Pooling, No AutoPrepare)
-            // Port 5432 = Session Mode (Default Pooling is fine)
+            // Port 5432 = Session Mode (Default Pooling is fine, but MUST LIMIT SIZE)
             Pooling = uri.Port == 5432,
+            MaxPoolSize = uri.Port == 5432 ? 3 : 0, // CRITICAL: Supabase Free Pooler has limit ~15. We limit app to 3 to be safe.
             MaxAutoPrepare = uri.Port == 5432 ? 20 : 0
         };
         connString = connBuilder.ToString();
@@ -98,9 +99,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 Console.WriteLine("[DB INIT] Ensuring tables exist...");
                 
-                // --- HARD RESET COMMAND (Requested by User) ---
-                // Drops all tables to valid fresh state (Fixes 500 errors due to schema mismatch or corrupted data)
-                // This runs ONCE on startup.
+                // --- HARD RESET COMMAND (DISABLED) ---
+                /* 
                 try {
                      Console.WriteLine("[DB RESET] Cleaning up old data...");
                      // Drop in order of dependency
@@ -119,6 +119,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                      ");
                      Console.WriteLine("[DB RESET] Data cleared successfully.");
                 } catch (Exception ex) { Console.WriteLine($"[DB RESET INFO] {ex.Message}"); }
+                */
                 // ----------------------------------------------
 
                 db.Database.ExecuteSqlRaw(@"
