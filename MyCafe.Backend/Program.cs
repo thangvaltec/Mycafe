@@ -58,10 +58,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
     options.UseNpgsql(connString, npgsqlOptions => {
         npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
+            maxRetryCount: 10, // Increased retry count
+            maxRetryDelay: TimeSpan.FromSeconds(30), // Increased delay
             errorCodesToAdd: null
         );
+        npgsqlOptions.CommandTimeout(30); // Prevent long hanging queries
     });
 });
 
@@ -96,6 +97,30 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             try 
             {
                 Console.WriteLine("[DB INIT] Ensuring tables exist...");
+                
+                // --- HARD RESET COMMAND (Requested by User) ---
+                // Drops all tables to valid fresh state (Fixes 500 errors due to schema mismatch or corrupted data)
+                // This runs ONCE on startup.
+                try {
+                     Console.WriteLine("[DB RESET] Cleaning up old data...");
+                     // Drop in order of dependency
+                     db.Database.ExecuteSqlRaw(@"
+                        DROP TABLE IF EXISTS invoice_items CASCADE;
+                        DROP TABLE IF EXISTS invoices CASCADE;
+                        DROP TABLE IF EXISTS order_items CASCADE;
+                        DROP TABLE IF EXISTS orders CASCADE;
+                        DROP TABLE IF EXISTS payments CASCADE;
+                        DROP TABLE IF EXISTS billiard_sessions CASCADE;
+                        DROP TABLE IF EXISTS menu_items CASCADE;
+                        DROP TABLE IF EXISTS categories CASCADE;
+                        DROP TABLE IF EXISTS tables CASCADE;
+                        DROP TABLE IF EXISTS expenses CASCADE;
+                        DROP TABLE IF EXISTS users CASCADE; 
+                     ");
+                     Console.WriteLine("[DB RESET] Data cleared successfully.");
+                } catch (Exception ex) { Console.WriteLine($"[DB RESET INFO] {ex.Message}"); }
+                // ----------------------------------------------
+
                 db.Database.ExecuteSqlRaw(@"
                     CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, username VARCHAR(50) NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(20) DEFAULT 'ADMIN');
                     CREATE TABLE IF NOT EXISTS categories (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL);
