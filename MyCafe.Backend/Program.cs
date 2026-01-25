@@ -47,9 +47,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             Password = userInfo[1],
             Database = uri.AbsolutePath.TrimStart('/'),
             SslMode = Npgsql.SslMode.Require,
-            // Critical for PgBouncer Transaction Mode (Port 6543)
-            MaxAutoPrepare = 0,
-            Pooling = false 
+            // Smart Configuration for Supabase
+            // Port 6543 = Transaction Mode (No Pooling, No AutoPrepare)
+            // Port 5432 = Session Mode (Default Pooling is fine)
+            Pooling = uri.Port == 5432,
+            MaxAutoPrepare = uri.Port == 5432 ? 20 : 0
         };
         connString = connBuilder.ToString();
     }

@@ -144,7 +144,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
             )}
 
             {!onSwitchToAdmin && !onBackToTableList && (
-              <div className="w-9 h-9 bg-[#C2A383] rounded-xl flex items-center justify-center text-[#4B3621] text-lg font-black shadow-inner">H</div>
+              <div className="w-9 h-9 bg-[#C2A383] rounded-xl flex items-center justify-center text-[#4B3621] text-lg font-black shadow-inner">B</div>
             )}
 
             <div className={`flex flex-col ${onSwitchToAdmin || onBackToTableList ? 'hidden sm:flex' : ''}`}>
