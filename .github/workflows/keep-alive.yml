@@ -1,0 +1,19 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    # Ping mỗi 10 phút (Sẽ an toàn hơn 14 phút đề phòng GitHub trễ giờ)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping All Services
+        run: |
+          # Ping Render Backend (Cái này quan trọng nhất vì nó hay ngủ)
+          curl -I https://mycafe-backend-prx3.onrender.com/api/table
+          # Ping Vercel Frontend (Theo yêu cầu của anh để chắc chắn)
+          curl -I https://mycafe-omega.vercel.app/
+          echo "Pings completed successfully at $(date)!"
