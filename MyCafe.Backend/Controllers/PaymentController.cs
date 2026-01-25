@@ -122,13 +122,21 @@ public class PaymentController : ControllerBase
             table.CurrentOrderId = null;
         }
 
-        await _context.SaveChangesAsync();
-
-        return Ok(new { 
-            Success = true, 
-            Change = change, 
-            OrderId = order.Id 
-        });
+        try 
+        {
+            await _context.SaveChangesAsync();
+            return Ok(new { 
+                Success = true, 
+                Change = change, 
+                OrderId = order.Id 
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CHECKOUT ERROR] Database save failed: {ex.Message}");
+            if (ex.InnerException != null) Console.WriteLine($"[INNER] {ex.InnerException.Message}");
+            return StatusCode(500, $"Lỗi xử lý thanh toán: {ex.Message}");
+        }
     }
 }
 

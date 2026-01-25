@@ -363,7 +363,11 @@ const App: React.FC = () => {
                           }
                       `}
                       >
-                        <span className="text-3xl font-black">{t.name.replace('Bàn ', '')}</span>
+                        <span className="text-3xl font-black">
+                          {t.alias === 'Bi-a'
+                            ? t.name.replace('Bida ', 'Bi-a ')
+                            : t.name.replace('Bàn ', '')}
+                        </span>
                         <span className="text-[10px] font-black uppercase tracking-widest">{t.name}</span>
                         {t.isOccupied && <span className="absolute top-4 right-4 text-[8px] bg-gray-200 px-2 py-0.5 rounded-full font-bold">ĐANG DÙNG</span>}
                         {cartCount > 0 && (
