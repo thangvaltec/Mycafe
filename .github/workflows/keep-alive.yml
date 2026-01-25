@@ -2,8 +2,8 @@ name: Keep Backend Alive
 
 on:
   schedule:
-    # Ping mỗi 10 phút (Sẽ an toàn hơn 14 phút đề phòng GitHub trễ giờ)
-    - cron: '*/10 * * * *'
+    # Ping mỗi 5 phút (Tối ưu hóa tối đa để server không bao giờ ngủ)
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
