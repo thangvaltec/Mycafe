@@ -148,143 +148,149 @@ public class BilliardController : ControllerBase
         Console.WriteLine($"[Checkout] INITIATED for Table {tableId}");
         Console.WriteLine($"[Checkout] Request: Method={request.PaymentMethod}, Discount={request.Discount}, Start={request.FinalStartTime}, End={request.FinalEndTime}");
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        // Use execution strategy to handle transactions with retry logic
+        var strategy = _context.Database.CreateExecutionStrategy();
+        
+        return await strategy.ExecuteAsync(async () =>
         {
-            var session = await _context.BilliardSessions
-                .FirstOrDefaultAsync(s => s.TableId == tableId && s.Status == "ACTIVE");
-            Console.WriteLine($"[Checkout] Found Session: {session?.Id} (Status: {session?.Status})");
-
-            var order = await _context.Orders
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.TableId == tableId && o.Status != "PAID" && o.Status != "CANCELLED");
-            Console.WriteLine($"[Checkout] Found Order: {order?.Id} (Status: {order?.Status})");
-            
-            var table = await _context.Tables.FirstOrDefaultAsync(t => t.Id == tableId);
-
-            if (session == null && order == null) 
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Console.WriteLine("[Checkout] ERROR: No Session and No Order found!");
-                return BadRequest("Không có gì để thanh toán!");
-            }
+                var session = await _context.BilliardSessions
+                    .FirstOrDefaultAsync(s => s.TableId == tableId && s.Status == "ACTIVE");
+                Console.WriteLine($"[Checkout] Found Session: {session?.Id} (Status: {session?.Status})");
 
-            // Use Manual Times or Current Time
-            var finalEndTime = request.FinalEndTime ?? DateTime.UtcNow;
-            
-            var invoice = new Invoice
-            {
-                TableId = tableId,
-                PaymentMethod = request.PaymentMethod,
-                CreatedAt = finalEndTime,
-                BilliardSessionId = session?.Id,
-                OrderId = order?.Id,
-                IdentifyString = $"{table?.Name ?? "Table " + tableId} ({finalEndTime.ToLocalTime():yyyy-MM-dd HH:mm})",
-                Discount = request.Discount
-            };
+                var order = await _context.Orders
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.TableId == tableId && o.Status != "PAID" && o.Status != "CANCELLED");
+                Console.WriteLine($"[Checkout] Found Order: {order?.Id} (Status: {order?.Status})");
+                
+                var table = await _context.Tables.FirstOrDefaultAsync(t => t.Id == tableId);
 
-            // 1. Process Session & Time Fee
-            decimal timeAmount = 0;
-            string timeDescription = "Tiền giờ";
-            
-            if (session != null)
-            {
-                // Verify Manual Start Time if provided
-                if (request.FinalStartTime.HasValue) 
+                if (session == null && order == null) 
                 {
-                    session.StartTime = request.FinalStartTime.Value;
+                    Console.WriteLine("[Checkout] ERROR: No Session and No Order found!");
+                    return BadRequest("Không có gì để thanh toán!");
                 }
 
-                var duration = finalEndTime - session.StartTime;
-                timeAmount = Math.Ceiling(((decimal)duration.TotalHours * session.PricePerHour) / 1000) * 1000;
-                timeDescription = $"Tiền giờ ({duration.Hours}h {duration.Minutes}m)";
+                // Use Manual Times or Current Time
+                var finalEndTime = request.FinalEndTime ?? DateTime.UtcNow;
                 
-                session.EndTime = finalEndTime;
-                session.TotalAmount = timeAmount;
-                session.Status = "PAID"; // Mark session as closed
-            }
-
-            // 2. Ensure Order Exists for Reporting (Unified Transaction)
-            if (order == null)
-            {
-                order = new Order
+                var invoice = new Invoice
                 {
-                    Id = Guid.NewGuid(),
                     TableId = tableId,
-                    Status = "NEW", // Will be set to PAID shortly
+                    PaymentMethod = request.PaymentMethod,
                     CreatedAt = finalEndTime,
-                    Items = new List<OrderItem>()
+                    BilliardSessionId = session?.Id,
+                    OrderId = order?.Id,
+                    IdentifyString = $"{table?.Name ?? "Table " + tableId} ({finalEndTime.ToLocalTime():yyyy-MM-dd HH:mm})",
+                    Discount = request.Discount
                 };
-                _context.Orders.Add(order);
-            }
 
-            // 3. Add Time Fee to Order Items
-            if (timeAmount > 0)
-            {
-                var timeItem = new OrderItem
+                // 1. Process Session & Time Fee
+                decimal timeAmount = 0;
+                string timeDescription = "Tiền giờ";
+                
+                if (session != null)
                 {
-                    OrderId = order.Id,
-                    ProductName = timeDescription,
-                    Price = timeAmount,
-                    Quantity = 1
-                };
-                order.Items.Add(timeItem);
-                _context.OrderItems.Add(timeItem);
-            }
+                    // Verify Manual Start Time if provided
+                    if (request.FinalStartTime.HasValue) 
+                    {
+                        session.StartTime = request.FinalStartTime.Value;
+                    }
 
-            // 4. Update Order Status & Total
-            order.Status = "PAID";
-            order.PaymentMethod = request.PaymentMethod;
-            order.PaymentAmount = request.PaymentAmount;
-            order.TotalAmount = order.Items.Sum(i => i.Price * i.Quantity); // Re-sum to include time fee
-            order.Discount = request.Discount; // NEW: Save discount to order for history view
+                    var duration = finalEndTime - session.StartTime;
+                    timeAmount = Math.Ceiling(((decimal)duration.TotalHours * session.PricePerHour) / 1000) * 1000;
+                    timeDescription = $"Tiền giờ ({duration.Hours}h {duration.Minutes}m)";
+                    
+                    session.EndTime = finalEndTime;
+                    session.TotalAmount = timeAmount;
+                    session.Status = "PAID"; // Mark session as closed
+                }
 
-            // 5. Create Invoice (Mirroring the Unified Order)
-            invoice.OrderId = order.Id;
-            invoice.TotalAmount = order.TotalAmount - request.Discount; // Apply Discount
-            if (invoice.TotalAmount < 0) invoice.TotalAmount = 0; // Prevent negative
-            
-            // Add items to Invoice for historical record (Invoice table)
-            foreach (var item in order.Items)
-            {
-                invoice.Items.Add(new InvoiceItem
+                // 2. Ensure Order Exists for Reporting (Unified Transaction)
+                if (order == null)
                 {
-                    Name = item.ProductName ?? "Item",
-                    Quantity = item.Quantity,
-                    UnitPrice = item.Price,
-                    TotalPrice = item.Price * item.Quantity,
-                    Type = (item.ProductName != null && item.ProductName.Contains("Tiền giờ")) ? "TIME_FEE" : "MENU_ITEM"
-                });
+                    order = new Order
+                    {
+                        Id = Guid.NewGuid(),
+                        TableId = tableId,
+                        Status = "NEW", // Will be set to PAID shortly
+                        CreatedAt = finalEndTime,
+                        Items = new List<OrderItem>()
+                    };
+                    _context.Orders.Add(order);
+                }
+
+                // 3. Add Time Fee to Order Items
+                if (timeAmount > 0)
+                {
+                    var timeItem = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        ProductName = timeDescription,
+                        Price = timeAmount,
+                        Quantity = 1
+                    };
+                    order.Items.Add(timeItem);
+                    _context.OrderItems.Add(timeItem);
+                }
+
+                // 4. Update Order Status & Total
+                order.Status = "PAID";
+                order.PaymentMethod = request.PaymentMethod;
+                order.PaymentAmount = request.PaymentAmount;
+                order.TotalAmount = order.Items.Sum(i => i.Price * i.Quantity); // Re-sum to include time fee
+                order.Discount = request.Discount; // NEW: Save discount to order for history view
+
+                // 5. Create Invoice (Mirroring the Unified Order)
+                invoice.OrderId = order.Id;
+                invoice.TotalAmount = order.TotalAmount - request.Discount; // Apply Discount
+                if (invoice.TotalAmount < 0) invoice.TotalAmount = 0; // Prevent negative
+                
+                // Add items to Invoice for historical record (Invoice table)
+                foreach (var item in order.Items)
+                {
+                    invoice.Items.Add(new InvoiceItem
+                    {
+                        Name = item.ProductName ?? "Item",
+                        Quantity = item.Quantity,
+                        UnitPrice = item.Price,
+                        TotalPrice = item.Price * item.Quantity,
+                        Type = (item.ProductName != null && item.ProductName.Contains("Tiền giờ")) ? "TIME_FEE" : "MENU_ITEM"
+                    });
+                }
+
+                _context.Invoices.Add(invoice);
+
+                // 6. Update Table Status
+                if (table != null)
+                {
+                    table.Status = "Empty";
+                    table.IsOccupied = false;
+                    table.CurrentOrderId = null;
+                    table.GuestName = null;
+                }
+
+                Console.WriteLine($"[Checkout] Order ID: {order.Id}, Total: {order.TotalAmount}, Disc: {order.Discount}");
+                Console.WriteLine($"[Checkout] Invoice ID: {invoice.Id}, Items: {invoice.Items.Count}");
+
+                await _context.SaveChangesAsync();
+                Console.WriteLine("[Checkout] SaveChanges SUCCESSFUL");
+                
+                await transaction.CommitAsync();
+                Console.WriteLine("[Checkout] Transaction COMMITTED");
+                
+                return Ok(invoice);
             }
-
-            _context.Invoices.Add(invoice);
-
-            // 6. Update Table Status
-            if (table != null)
+            catch (Exception ex)
             {
-                table.Status = "Empty";
-                table.IsOccupied = false;
-                table.CurrentOrderId = null;
-                table.GuestName = null;
+                Console.WriteLine($"[Checkout] FATAL ERROR: {ex.Message}");
+                if (ex.InnerException != null) Console.WriteLine($"[Checkout] INNER: {ex.InnerException.Message}");
+                await transaction.RollbackAsync();
+                return StatusCode(500, "Lỗi thanh toán: " + ex.Message);
             }
-
-            Console.WriteLine($"[Checkout] Order ID: {order.Id}, Total: {order.TotalAmount}, Disc: {order.Discount}");
-            Console.WriteLine($"[Checkout] Invoice ID: {invoice.Id}, Items: {invoice.Items.Count}");
-
-            await _context.SaveChangesAsync();
-            Console.WriteLine("[Checkout] SaveChanges SUCCESSFUL");
-            
-            await transaction.CommitAsync();
-            Console.WriteLine("[Checkout] Transaction COMMITTED");
-            
-            return Ok(invoice);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Checkout] FATAL ERROR: {ex.Message}");
-            if (ex.InnerException != null) Console.WriteLine($"[Checkout] INNER: {ex.InnerException.Message}");
-            await transaction.RollbackAsync();
-            return StatusCode(500, "Lỗi thanh toán: " + ex.Message);
-        }
+        });
     }
 
     // --- Legacy / Simple Actions ---
