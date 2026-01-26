@@ -74,11 +74,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     var app = builder.Build();
 
     // Configure the HTTP request pipeline.
+    app.UseSwagger();
+    app.UseSwaggerUI(c => {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MyCafe API V1");
+        c.RoutePrefix = "swagger"; // Swagger will be at /swagger
+    });
+
     if (app.Environment.IsDevelopment())
     {
         app.UseDeveloperExceptionPage();
-        app.UseSwagger();
-        app.UseSwaggerUI(); // /swagger
     }
 
     app.UseCors("AllowAll");
