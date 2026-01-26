@@ -76,6 +76,7 @@ CREATE TABLE "orders" (
     "payment_method" character varying(20),
     "payment_amount" numeric,
     "change_amount" numeric,
+    "discount_amount" numeric DEFAULT 0,
     CONSTRAINT "PK_orders" PRIMARY KEY ("id"),
     CONSTRAINT "FK_orders_tables_table_id" FOREIGN KEY ("table_id") REFERENCES "tables" ("id")
 );
@@ -138,6 +139,7 @@ CREATE TABLE "invoices" (
     "payment_method" character varying(50) DEFAULT 'cash',
     "identify_string" character varying(200) NOT NULL,
     "created_at" timestamp with time zone NOT NULL,
+    "discount" numeric DEFAULT 0,
     CONSTRAINT "PK_invoices" PRIMARY KEY ("id")
 );
 
@@ -169,7 +171,7 @@ INSERT INTO tables (table_number, name, alias, status, is_occupied) VALUES
 ('BI-03', 'Bàn Bida 3', 'Bi-a', 'Empty', false),
 ('BI-04', 'Bàn Bida 4', 'Bi-a', 'Empty', false);
 
--- Cafe 1-10
+-- Cafe 1-18
 INSERT INTO tables (table_number, name, alias, status, is_occupied) VALUES 
 ('01', 'Bàn 1', 'Cafe', 'Empty', false),
 ('02', 'Bàn 2', 'Cafe', 'Empty', false),
@@ -180,11 +182,18 @@ INSERT INTO tables (table_number, name, alias, status, is_occupied) VALUES
 ('07', 'Bàn 7', 'Cafe', 'Empty', false),
 ('08', 'Bàn 8', 'Cafe', 'Empty', false),
 ('09', 'Bàn 9', 'Cafe', 'Empty', false),
-('10', 'Bàn 10', 'Cafe', 'Empty', false);
+('10', 'Bàn 10', 'Cafe', 'Empty', false),
+('12', 'Bàn 12', 'Cafe', 'Empty', false),
+('13', 'Bàn 13', 'Cafe', 'Empty', false),
+('14', 'Bàn 14', 'Cafe', 'Empty', false),
+('15', 'Bàn 15', 'Cafe', 'Empty', false),
+('16', 'Bàn 16', 'Cafe', 'Empty', false),
+('17', 'Bàn 17', 'Cafe', 'Empty', false),
+('18', 'Bàn 18', 'Cafe', 'Empty', false);
 
--- Takeaway
+-- Takeaway (Table 11)
 INSERT INTO tables (table_number, name, alias, status, is_occupied) VALUES 
-('MV', 'Mang về', 'Takeaway', 'Empty', false);
+('11', 'Mang về', 'Takeaway', 'Empty', false);
 
 -- Categories
 INSERT INTO categories (id, name) VALUES 
