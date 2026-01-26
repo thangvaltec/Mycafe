@@ -107,11 +107,35 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
   const handleSend = () => {
     if (itemCount === 0) return;
-    const items: OrderItem[] = Object.entries(selectedItems).map(([pid, qty]) => {
-      const p = products.find(prod => String(prod.id) === String(pid))!;
-      return { productId: pid, productName: p.name, price: p.price, quantity: qty as number };
+
+    // Safety check: Filter out items that no longer exist in the products list
+    const validItems: OrderItem[] = [];
+    let hasInvalidItems = false;
+
+    Object.entries(selectedItems).forEach(([pid, qty]) => {
+      const p = products.find(prod => String(prod.id) === String(pid));
+      if (p) {
+        validItems.push({
+          productId: pid,
+          productName: p.name,
+          price: p.price,
+          quantity: qty as number
+        });
+      } else {
+        hasInvalidItems = true;
+      }
     });
-    onPlaceOrder(items);
+
+    if (validItems.length === 0) {
+      if (hasInvalidItems) {
+        alert("Một số món trong giỏ hàng không còn tồn tại. Giỏ hàng đã được làm mới.");
+        setSelectedItems({});
+        localStorage.removeItem(`cart_table_${table.id}`);
+      }
+      return;
+    }
+
+    onPlaceOrder(validItems);
     setSelectedItems({}); // Clear cart
     localStorage.removeItem(`cart_table_${table.id}`); // Clear storage
     setShowSheet(false);

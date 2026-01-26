@@ -285,6 +285,20 @@ const App: React.FC = () => {
 
   const currentCustomerTable = tables.find(t => String(t.id) === String(selectedTableId));
 
+  // If tableId is selected but table not found (e.g. DB reset), fallback to table list if possible
+  if (selectedTableId && !currentCustomerTable && !isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] p-10 text-center">
+        <div className="space-y-6">
+          <i className="fas fa-exclamation-triangle text-6xl text-amber-500"></i>
+          <h3 className="text-2xl font-black text-[#4B3621] uppercase">Không tìm thấy bàn</h3>
+          <p className="text-sm text-gray-500 font-bold max-w-xs mx-auto">Mã bàn này không còn tồn tại hoặc dữ liệu đã được thay đổi.</p>
+          <button onClick={() => { setSelectedTableId(''); window.history.pushState({}, '', '/'); }} className="bg-[#4B3621] text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest transition-all">Quay lại trang chủ</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[1440px] mx-auto min-h-screen">
       {role === 'ADMIN' || role === 'STAFF' ? (
