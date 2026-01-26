@@ -161,7 +161,8 @@ CREATE TABLE "invoice_items" (
 -- Users (Admin Account)
 INSERT INTO users (id, username, password, role) VALUES 
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin', 'admin123', 'ADMIN'),
-('a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'staff', 'staff123', 'STAFF');
+('a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'tuan', 'admin123', 'ADMIN'),
+('a2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', 'staff', 'staff123', 'STAFF');
 
 -- Tables
 -- Billiard 1-4
