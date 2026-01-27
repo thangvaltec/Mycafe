@@ -6,6 +6,7 @@ import { authUtils } from './utils/auth';
 import { api } from './services/api';
 import AdminView from './components/AdminView';
 import CustomerView from './components/CustomerView';
+import LoadingScreen from './components/LoadingScreen';
 
 const App: React.FC = () => {
 
@@ -51,8 +52,11 @@ const App: React.FC = () => {
       setOrders(o);
       setExpenses(e || []);
 
+      // TẠM THỜI: Đợi 5 giây để bạn xem giao diện Loading mới (bóng bida & café)
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 5000);
 
-      setIsLoading(false);
     } catch (err) {
       console.error("Failed to load data", err);
       setIsLoading(false);
@@ -226,7 +230,7 @@ const App: React.FC = () => {
         {/* Login Card */}
         <div className="bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-white/20 relative z-10 transition-all hover:shadow-cyan-500/10 hover:scale-[1.01] duration-500">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter drop-shadow-sm">Bống Cafe Sân Vườn-Billiard</h1>
+            <h1 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter drop-shadow-sm">Bống Coffee Sân Vườn & Billiards</h1>
             <p className="text-[10px] text-[#8C6B4F] font-bold uppercase tracking-[0.3em] mt-2">Hệ thống quản trị</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-5">
@@ -275,12 +279,7 @@ const App: React.FC = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] flex-col gap-6">
-        <div className="w-16 h-16 border-4 border-[#C2A383]/20 border-t-[#4B3621] rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black text-[#4B3621] uppercase tracking-[0.3em] animate-pulse">Vui lòng đợi giây lát...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   const currentCustomerTable = tables.find(t => String(t.id) === String(selectedTableId));

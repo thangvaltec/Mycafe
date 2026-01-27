@@ -118,7 +118,7 @@ const AdminView: React.FC<AdminViewProps> = ({
         <div className="hidden lg:flex flex-col items-center xl:items-start gap-4 p-8 w-full border-b border-white/5">
           <div className="w-12 h-12 bg-[#C2A383] rounded-2xl flex items-center justify-center text-[#4B3621] text-2xl font-black">B</div>
           <div className="hidden xl:block">
-            <h1 className="font-black text-base leading-none tracking-tighter">Bống Cafe Sân Vườn-Billiard</h1>
+            <h1 className="font-black text-base leading-none tracking-tighter">Bống Coffee Sân Vườn & Billiards</h1>
             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Hệ thống quản trị</p>
           </div>
         </div>
