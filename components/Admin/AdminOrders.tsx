@@ -78,7 +78,10 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                       <h4 className="text-2xl font-black text-[#4B3621] leading-none">{table?.guestName === 'Khách vãng lai' ? '' : (table?.guestName || '')}</h4>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{formatVND(order.totalAmount)}đ</span>
+                      <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{formatVND(order.totalAmount - (order.discountAmount || 0))}đ</span>
+                      {order.discountAmount && order.discountAmount > 0 && (
+                        <span className="text-[8px] font-bold text-red-500 line-through opacity-50">{formatVND(order.totalAmount)}đ</span>
+                      )}
                       <span className="text-[9px] font-black text-gray-400 uppercase">{getStatusLabel(order.status)}</span>
                     </div>
                   </div>
@@ -189,7 +192,14 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                           {getMethodLabel(order.paymentMethod)}
                         </span>
                       </td>
-                      <td className="px-2 md:px-4 py-4 text-right font-black text-[#4B3621] whitespace-nowrap text-xs md:text-sm">{formatVND(order.totalAmount)}đ</td>
+                      <td className="px-2 md:px-4 py-4 text-right font-black text-[#4B3621] whitespace-nowrap text-xs md:text-sm">
+                        <div className="flex flex-col items-end">
+                          <span>{formatVND(order.totalAmount - (order.discountAmount || 0))}đ</span>
+                          {order.discountAmount && order.discountAmount > 0 && (
+                            <span className="text-[9px] font-bold text-red-500 line-through opacity-50">{formatVND(order.totalAmount)}đ</span>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -257,22 +267,24 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   <span className="text-2xl font-black text-[#4B3621]">{formatVND(viewingHistoryOrder.totalAmount)}đ</span>
                 </div>
 
-                {viewingHistoryOrder.discountAmount && viewingHistoryOrder.discountAmount > 0 ? (
+                {viewingHistoryOrder.discountAmount && viewingHistoryOrder.discountAmount > 0 && (
                   <div className="flex justify-between items-center py-2 border-y border-dashed border-gray-200">
-                    <span className="text-red-400 font-bold text-[10px] uppercase tracking-widest">GIẢM GIÁ / CHIẾT KHẤU:</span>
+                    <span className="text-red-400 font-bold text-[10px] uppercase tracking-widest">SỐ TIỀN ĐÃ GIẢM:</span>
                     <span className="text-lg font-black text-red-500">-{formatVND(viewingHistoryOrder.discountAmount)}đ</span>
                   </div>
-                ) : null}
+                )}
 
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">THỰC THU ({viewingHistoryOrder.paymentMethod === PaymentMethod.CASH ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN'}):</span>
                   <span className="text-3xl font-black text-emerald-600">{formatVND(viewingHistoryOrder.totalAmount - (viewingHistoryOrder.discountAmount || 0))}đ</span>
                 </div>
 
-                <div className="flex justify-between items-center opacity-40">
-                  <span className="text-gray-400 font-bold text-[9px] uppercase tracking-widest">TIỀN THỪA TRẢ KHÁCH:</span>
-                  <span className="text-lg font-black text-emerald-600">{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
-                </div>
+                {viewingHistoryOrder.paymentMethod === PaymentMethod.CASH && (
+                  <div className="flex justify-between items-center opacity-40">
+                    <span className="text-gray-400 font-bold text-[9px] uppercase tracking-widest">TIỀN THỪA TRẢ KHÁCH:</span>
+                    <span className="text-lg font-black text-emerald-600">{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
+                  </div>
+                )}
               </div>
             </div>
 

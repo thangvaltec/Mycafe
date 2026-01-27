@@ -144,6 +144,7 @@ public class Order
     public decimal? ChangeAmount { get; set; }
 
     [Column("discount_amount")]
+    [JsonPropertyName("discountAmount")]
     public decimal Discount { get; set; } = 0;
 
     public List<OrderItem> Items { get; set; } = new();
@@ -293,6 +294,7 @@ public class Invoice
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [Column("discount")]
+    [JsonPropertyName("discountAmount")]
     public decimal Discount { get; set; } = 0;
 
     public List<InvoiceItem> Items { get; set; } = new();

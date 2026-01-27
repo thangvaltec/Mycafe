@@ -42,6 +42,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
   const [billiardSession, setBilliardSession] = useState<BilliardSession | null>(null);
   const [durationStr, setDurationStr] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Fetch Billiard Session Loop
   React.useEffect(() => {
@@ -139,6 +140,12 @@ const CustomerView: React.FC<CustomerViewProps> = ({
     setSelectedItems({}); // Clear cart
     localStorage.removeItem(`cart_table_${table.id}`); // Clear storage
     setShowSheet(false);
+
+    // Show success message and auto-hide
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
   };
 
   return (
@@ -398,6 +405,23 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                 <span className="text-4xl font-black text-[#4B3621] tracking-tighter">{formatVND(total)}đ</span>
               </div>
               <button onClick={handleSend} className="w-full bg-[#4B3621] text-white py-5 rounded-[28px] font-black text-sm shadow-xl uppercase tracking-widest active:scale-95 transition-transform hover:shadow-2xl">GỬI YÊU CẦU PHỤC VỤ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. THÔNG BÁO THÀNH CÔNG */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#4B3621] p-1 rounded-[38px] shadow-2xl animate-bounce-subtle ring-4 ring-[#C2A383]/10 w-full max-w-sm mx-auto">
+            <div className="bg-white p-10 rounded-[34px] border border-[#C2A383]/20 text-center">
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i className="fas fa-check text-3xl text-emerald-500"></i>
+              </div>
+              <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter mb-2">ĐẶT MÓN THÀNH CÔNG!</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-relaxed">
+                Yêu cầu của quý khách đã được gửi đi. Vui lòng đợi trong giây lát!
+              </p>
             </div>
           </div>
         </div>

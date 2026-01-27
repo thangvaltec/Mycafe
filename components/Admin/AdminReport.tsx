@@ -465,7 +465,12 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                     </span>
                   </td>
                   <td className={`px-6 py-4 text-right font-black text-lg tracking-tighter ${item.type === 'IN' ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {item.type === 'IN' ? '+' : '-'}{formatVND(item.type === 'IN' ? (item.totalAmount - (item.discountAmount || 0)) : (item.amount || 0))}
+                    <div className="flex flex-col items-end">
+                      <span>{item.type === 'IN' ? '+' : '-'}{formatVND(item.type === 'IN' ? (item.totalAmount - (item.discountAmount || 0)) : (item.amount || 0))}</span>
+                      {item.type === 'IN' && item.discountAmount && item.discountAmount > 0 && (
+                        <span className="text-[9px] font-bold text-red-500 line-through opacity-50">{formatVND(item.totalAmount)}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-left">
                     <p className="text-sm font-bold text-[#4B3621] line-clamp-1">
@@ -494,7 +499,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
             </tbody>
           </table>
         </div>
-      </div>
+      </div >
     </div >
   );
 };

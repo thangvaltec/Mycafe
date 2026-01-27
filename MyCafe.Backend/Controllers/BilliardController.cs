@@ -54,6 +54,16 @@ public class BilliardController : ControllerBase
         };
 
         _context.BilliardSessions.Add(session);
+
+        // SYNC: Update the table record as well so it shows up in "Admin Orders" and "POS Grid"
+        var table = await _context.Tables.FindAsync(request.TableId);
+        if (table != null)
+        {
+            table.GuestName = request.GuestName;
+            table.IsOccupied = true;
+            table.Status = "Ordering";
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(session);
