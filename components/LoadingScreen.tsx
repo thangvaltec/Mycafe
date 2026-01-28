@@ -8,7 +8,7 @@ const LoadingScreen: React.FC = () => {
     useEffect(() => {
         const interval = setInterval(() => {
             setMsgIndex((prev) => (prev + 1) % messages.length);
-        }, 3000);
+        }, 2000);
         return () => clearInterval(interval);
     }, []);
 
@@ -120,8 +120,8 @@ const LoadingScreen: React.FC = () => {
                         <div key={i} className="w-2 h-2 bg-[#c2a383] rounded-full animate-bounce shadow-[0_0_10px_rgba(194,163,131,0.5)]" style={{ animationDelay: `${i * 0.2}s` }}></div>
                     ))}
                 </div>
-                <p className="text-[11px] lg:text-[13px] font-black text-[#dac2a9] uppercase tracking-[0.5em] italic drop-shadow-sm whitespace-nowrap">
-                    Hệ thống đang sẵn sàng phục vụ...
+                <p className="text-[11px] lg:text-[13px] font-black text-[#dac2a9] uppercase tracking-[0.15em] lg:tracking-[0.35em] italic drop-shadow-sm whitespace-nowrap">
+                    Hệ thống sẵn sàng phục vụ...
                 </p>
             </div>
 
