@@ -199,17 +199,68 @@ INSERT INTO tables (table_number, name, alias, status, is_occupied) VALUES
 ('11', 'Mang về', 'Takeaway', 'Empty', false);
 
 -- Categories
-INSERT INTO categories (id, name) VALUES 
-('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Đồ uống'),
-('b2eebc99-9c0b-4ef8-bb6d-6bb9bd380b22', 'Đồ ăn'),
-('b3eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Dịch vụ');
+INSERT INTO categories (id, name, created_at) VALUES 
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', '☕ CÀ PHÊ', NOW() + interval '1 second'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b22', '🍫 CACAO & TRÀ NÓNG', NOW() + interval '2 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', '🥤 SINH TỐ', NOW() + interval '3 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b44', '🍹 NƯỚC ÉP', NOW() + interval '4 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b55', '🧊 TRÀ LẠNH', NOW() + interval '5 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b66', '🍵 MATCHA', NOW() + interval '6 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b77', '🧋 TRÀ SỮA', NOW() + interval '7 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b88', '🥤 NƯỚC GIẢI KHÁT', NOW() + interval '8 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b99', '🌻 ĂN VẶT', NOW() + interval '9 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380baa', '🎱 BILLIARDS', NOW() + interval '10 seconds');
 
 -- Menu Items
-INSERT INTO menu_items (id, category_id, name, price, is_active, description, image_path) VALUES 
-('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380c11', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê đen', 25000, true, 'Black Coffee', ''),
-('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380c22', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê sữa', 30000, true, 'Milk Coffee', ''),
-('c3eebc99-9c0b-4ef8-bb6d-6bb9bd380c33', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Sting', 15000, true, 'Energy Drink', ''),
-('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380c44', 'b2eebc99-9c0b-4ef8-bb6d-6bb9bd380b22', 'Mì tôm trứng', 35000, true, 'Noodles', ''),
-('c5eebc99-9c0b-4ef8-bb6d-6bb9bd380c55', 'b3eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Phí Bida', 50000, true, 'Billiard Fee', '');
+INSERT INTO menu_items (id, category_id, name, price, is_active, description, image_path, created_at) VALUES 
+-- ☕ CÀ PHÊ
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê máy (sữa)', 20000, true, '', '', NOW() + interval '11 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê máy (đường)', 20000, true, '', '', NOW() + interval '12 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê phin (sữa)', 15000, true, '', '', NOW() + interval '13 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê phin (đường)', 15000, true, '', '', NOW() + interval '14 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê đen lắc', 15000, true, '', '', NOW() + interval '15 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê sữa lắc', 15000, true, '', '', NOW() + interval '16 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Cà phê muối', 25000, true, '', '', NOW() + interval '17 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b11', 'Bạc xỉu', 25000, true, '', '', NOW() + interval '18 seconds'),
+
+-- 🍫 CACAO & TRÀ NÓNG
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b22', 'Cacao (nóng)', 25000, true, '', '', NOW() + interval '19 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b22', 'Cacao (đá)', 25000, true, '', '', NOW() + interval '20 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b22', 'Trà gừng nóng', 20000, true, '', '', NOW() + interval '21 seconds'),
+
+-- 🥤 SINH TỐ
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Sinh tố xoài', 25000, true, '', '', NOW() + interval '22 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Sinh tố bơ', 30000, true, '', '', NOW() + interval '23 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Sinh tố mãng cầu', 30000, true, '', '', NOW() + interval '24 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Sinh tố bơ sầu riêng', 30000, true, '', '', NOW() + interval '25 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Sinh tố sầu riêng', 30000, true, '', '', NOW() + interval '26 seconds'),
+
+-- 🍹 NƯỚC ÉP
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b44', 'Nước ép dừa', 25000, true, '', '', NOW() + interval '27 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b44', 'Nước ép dưa hấu', 25000, true, '', '', NOW() + interval '28 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b44', 'Nước ép cam', 25000, true, '', '', NOW() + interval '29 seconds'),
+
+-- 🧊 TRÀ LẠNH
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b55', 'Trà mận đào Tây Bắc', 25000, true, '', '', NOW() + interval '30 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b55', 'Trà xoài', 25000, true, '', '', NOW() + interval '31 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b55', 'Trà mãng cầu', 25000, true, '', '', NOW() + interval '32 seconds'),
+
+-- 🍵 MATCHA
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b66', 'Matcha latte', 25000, true, '', '', NOW() + interval '33 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b66', 'Matcha latte xoài', 30000, true, '', '', NOW() + interval '34 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b66', 'Matcha latte đậu đỏ', 30000, true, '', '', NOW() + interval '35 seconds'),
+
+-- 🧋 TRÀ SỮA
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b77', 'Trà sữa hồng trà trân châu', 25000, true, '', '', NOW() + interval '36 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b77', 'Trà sữa matcha', 25000, true, '', '', NOW() + interval '37 seconds'),
+
+-- 🥤 NƯỚC GIẢI KHÁT
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b88', 'Coca-Cola', 12000, true, '', '', NOW() + interval '38 seconds'),
+
+-- 🌻 ĂN VẶT
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b99', 'Hạt hướng dương', 10000, true, '', '', NOW() + interval '39 seconds'),
+
+-- 🎱 BILLIARDS
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380baa', 'Tiền giờ bàn billiards', 40000, true, 'Giá mỗi giờ', '', NOW() + interval '40 seconds');
 
 COMMIT;

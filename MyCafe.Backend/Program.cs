@@ -203,21 +203,54 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
             if (!db.Categories.Any())
             {
-                var c1 = new Category { Name = "Cà phê" };
-                var c2 = new Category { Name = "Trà sữa" };
-                var c3 = new Category { Name = "Ăn vặt" };
-                db.Categories.AddRange(c1, c2, c3);
-                
-                // Save first to get IDs if needed, or just AddRange items
-                // But simplified:
-                if (!db.MenuItems.Any())
+                var cats = new List<Category>
                 {
-                    db.MenuItems.AddRange(
-                        new MenuItem { Category = c1, Name = "Cà phê đen", Price = 25000, IsActive = true, Description = "Đậm đà" },
-                        new MenuItem { Category = c1, Name = "Cà phê sữa", Price = 30000, IsActive = true, Description = "Sữa đặc" },
-                        new MenuItem { Category = c2, Name = "Trà sữa thái", Price = 35000, IsActive = true, Description = "Thơm ngon" }
-                    );
-                }
+                    new Category { Name = "☕ CÀ PHÊ" },
+                    new Category { Name = "🍫 CACAO & TRÀ NÓNG" },
+                    new Category { Name = "🥤 SINH TỐ" },
+                    new Category { Name = "🍹 NƯỚC ÉP" },
+                    new Category { Name = "🧊 TRÀ LẠNH" },
+                    new Category { Name = "🍵 MATCHA" },
+                    new Category { Name = "🧋 TRÀ SỮA" },
+                    new Category { Name = "🥤 NƯỚC GIẢI KHÁT" },
+                    new Category { Name = "🌻 ĂN VẶT" },
+                    new Category { Name = "🎱 BILLIARDS" }
+                };
+                db.Categories.AddRange(cats);
+                await db.SaveChangesAsync();
+
+                var menuItems = new List<MenuItem>();
+                
+                // ☕ CÀ PHÊ
+                var catCafe = cats[0];
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê máy (sữa)", Price = 20000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê máy (đường)", Price = 20000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê phin (sữa)", Price = 15000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê phin (đường)", Price = 15000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê đen lắc", Price = 15000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê sữa lắc", Price = 15000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Cà phê muối", Price = 25000 });
+                menuItems.Add(new MenuItem { Category = catCafe, Name = "Bạc xỉu", Price = 25000 });
+
+                // 🍫 CACAO & TRÀ NÓNG
+                var catCacao = cats[1];
+                menuItems.Add(new MenuItem { Category = catCacao, Name = "Cacao (nóng)", Price = 25000 });
+                menuItems.Add(new MenuItem { Category = catCacao, Name = "Cacao (đá)", Price = 25000 });
+                menuItems.Add(new MenuItem { Category = catCacao, Name = "Trà gừng nóng", Price = 20000 });
+
+                // Sinh tố
+                var catSinhTo = cats[2];
+                menuItems.Add(new MenuItem { Category = catSinhTo, Name = "Sinh tố xoài", Price = 25000 });
+                menuItems.Add(new MenuItem { Category = catSinhTo, Name = "Sinh tố bơ", Price = 30000 });
+                menuItems.Add(new MenuItem { Category = catSinhTo, Name = "Sinh tố mãng cầu", Price = 30000 });
+                menuItems.Add(new MenuItem { Category = catSinhTo, Name = "Sinh tố bơ sầu riêng", Price = 30000 });
+                menuItems.Add(new MenuItem { Category = catSinhTo, Name = "Sinh tố sầu riêng", Price = 30000 });
+
+                // BILLIARDS
+                var catBilliards = cats[9];
+                menuItems.Add(new MenuItem { Category = catBilliards, Name = "Tiền giờ bàn billiards", Price = 40000, Description = "Giá mỗi giờ" });
+
+                db.MenuItems.AddRange(menuItems);
             }
 
             db.SaveChanges();
