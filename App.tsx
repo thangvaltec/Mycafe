@@ -38,29 +38,53 @@ const App: React.FC = () => {
 
   // Load initial data
   const loadData = async () => {
-    try {
-      const [t, p, c, o, e] = await Promise.all([
-        api.getTables(),
-        api.getProducts(),
-        api.getCategories(),
-        api.getOrders(),
-        api.getExpenses()
-      ]);
-      setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
-      setProducts(p);
-      setCategories(c);
-      setOrders(o);
-      setExpenses(e || []);
-
-      // TẠM THỜI: Đợi 5 giây để bạn xem giao diện Loading mới (bóng bida & café)
-      setTimeout(() => {
+    // Load each piece of data independently to avoid blocking
+    const fetchTables = async () => {
+      try {
+        const t = await api.getTables();
+        setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
+        // Reveal UI as soon as the most critical data (tables) is ready
         setIsLoading(false);
-      }, 5000);
+      } catch (err) {
+        console.error("Tables fail", err);
+        setIsLoading(false); // Stop loading even on failure so user sees error state
+      }
+    };
 
-    } catch (err) {
-      console.error("Failed to load data", err);
-      setIsLoading(false);
-    }
+    const fetchProducts = async () => {
+      try {
+        const p = await api.getProducts();
+        setProducts(p);
+      } catch (err) { console.error("Products fail", err); }
+    };
+
+    const fetchCategories = async () => {
+      try {
+        const c = await api.getCategories();
+        setCategories(c);
+      } catch (err) { console.error("Categories fail", err); }
+    };
+
+    const fetchOrders = async () => {
+      try {
+        const o = await api.getOrders();
+        setOrders(o);
+      } catch (err) { console.error("Orders fail", err); }
+    };
+
+    const fetchExpenses = async () => {
+      try {
+        const e = await api.getExpenses();
+        setExpenses(e || []);
+      } catch (err) { console.error("Expenses fail", err); }
+    };
+
+    // Fire all requests
+    fetchTables();
+    fetchProducts();
+    fetchCategories();
+    fetchOrders();
+    fetchExpenses();
   };
 
   useEffect(() => {
