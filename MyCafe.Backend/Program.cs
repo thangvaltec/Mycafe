@@ -59,8 +59,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
     options.UseNpgsql(connString, npgsqlOptions => {
         npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 10, // Back to 10 to ensure 50s total window (safe for cold starts)
-            maxRetryDelay: TimeSpan.FromSeconds(5), // Kept at 5s for fast response
+            maxRetryCount: 10,
+            maxRetryDelay: TimeSpan.FromSeconds(10), // Conservative 10s for better stability
             errorCodesToAdd: null
         );
         npgsqlOptions.CommandTimeout(30); 

@@ -187,14 +187,12 @@ export const api = {
     // Unified Billing
     getBill: (tableId: number) => fetchApi<any>(`/billiard/${tableId}/bill`),
     // Unified Checkout with Manual Adjustment Support
-    billiardCheckout: async (tableId: number, paymentMethod: string, paymentAmount?: number, finalStartTime?: string, finalEndTime?: string, discount?: number) => {
-        const res = await fetch(`${API_URL}/billiard/${tableId}/checkout`, {
+    billiardCheckout: (tableId: number, paymentMethod: string, paymentAmount?: number, finalStartTime?: string, finalEndTime?: string, discount?: number) => {
+        return fetchApi<any>(`/billiard/${tableId}/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentMethod, paymentAmount, finalStartTime, finalEndTime, discount })
         });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
     },
 };
 

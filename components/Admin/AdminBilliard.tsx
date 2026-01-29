@@ -72,7 +72,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
         };
         initData();
 
-        const interval = setInterval(fetchData, 5000);
+        const interval = setInterval(fetchData, 15000); // 15s is safer for cloud DBs
         const timer = setInterval(() => setNow(new Date()), 1000);
         return () => {
             clearInterval(interval);

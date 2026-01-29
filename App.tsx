@@ -38,53 +38,40 @@ const App: React.FC = () => {
 
   // Load initial data
   const loadData = async () => {
-    // Load each piece of data independently to avoid blocking
+    // Phase 1: High Priority (Tables & Layout)
     const fetchTables = async () => {
       try {
         const t = await api.getTables();
         setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
-        // Reveal UI as soon as the most critical data (tables) is ready
-        setIsLoading(false);
+        setIsLoading(false); // Immediate UI reveal
       } catch (err) {
         console.error("Tables fail", err);
-        setIsLoading(false); // Stop loading even on failure so user sees error state
+        setIsLoading(false);
       }
     };
 
-    const fetchProducts = async () => {
+    // Phase 2: Essential Operations (Products/Categories)
+    const fetchEssential = async () => {
       try {
-        const p = await api.getProducts();
+        const [p, c] = await Promise.all([api.getProducts(), api.getCategories()]);
         setProducts(p);
-      } catch (err) { console.error("Products fail", err); }
-    };
-
-    const fetchCategories = async () => {
-      try {
-        const c = await api.getCategories();
         setCategories(c);
-      } catch (err) { console.error("Categories fail", err); }
+      } catch (err) { console.error("Essential failed", err); }
     };
 
-    const fetchOrders = async () => {
+    // Phase 3: Heavy Data (Orders/Expenses)
+    const fetchHeavy = async () => {
       try {
-        const o = await api.getOrders();
+        const [o, e] = await Promise.all([api.getOrders(), api.getExpenses()]);
         setOrders(o);
-      } catch (err) { console.error("Orders fail", err); }
-    };
-
-    const fetchExpenses = async () => {
-      try {
-        const e = await api.getExpenses();
         setExpenses(e || []);
-      } catch (err) { console.error("Expenses fail", err); }
+      } catch (err) { console.error("Heavy failed", err); }
     };
 
-    // Fire all requests
-    fetchTables();
-    fetchProducts();
-    fetchCategories();
-    fetchOrders();
-    fetchExpenses();
+    // Sequential Execution Flow
+    await fetchTables();      // Wait for tables first
+    fetchEssential();         // Then fire essential in background
+    setTimeout(fetchHeavy, 1000); // Finally load heavy data after a small delay
   };
 
   useEffect(() => {
