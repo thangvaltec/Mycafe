@@ -23,7 +23,9 @@ public class MenuController : ControllerBase
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
     {
-        var categories = await _context.Categories.ToListAsync();
+        var categories = await _context.Categories
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync();
         return Ok(categories);
     }
 
@@ -74,7 +76,10 @@ public class MenuController : ControllerBase
     [HttpGet("items")]
     public async Task<IActionResult> GetMenuItems()
     {
-        var items = await _context.MenuItems.Include(m => m.Category).ToListAsync();
+        var items = await _context.MenuItems
+            .Include(m => m.Category)
+            .OrderBy(m => m.CreatedAt)
+            .ToListAsync();
         return Ok(items);
     }
 
