@@ -49,6 +49,7 @@ CREATE TABLE "tables" (
 CREATE TABLE "categories" (
     "id" uuid NOT NULL,
     "name" character varying(100) NOT NULL,
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "PK_categories" PRIMARY KEY ("id")
 );
 
@@ -61,6 +62,7 @@ CREATE TABLE "menu_items" (
     "image_path" character varying(500),
     "is_active" boolean NOT NULL DEFAULT TRUE,
     "description" text,
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "PK_menu_items" PRIMARY KEY ("id"),
     CONSTRAINT "FK_menu_items_categories_category_id" FOREIGN KEY ("category_id") REFERENCES "categories" ("id")
 );
