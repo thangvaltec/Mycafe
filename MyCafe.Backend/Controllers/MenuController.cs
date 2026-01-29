@@ -44,9 +44,14 @@ public class MenuController : ControllerBase
     {
         if (id != category.Id) return BadRequest("Lỗi dữ liệu: ID không khớp");
 
-        _context.Entry(category).State = EntityState.Modified;
+        var existing = await _context.Categories.FindAsync(id);
+        if (existing == null) return NotFound();
+
+        existing.Name = category.Name;
+        // Keep existing.CreatedAt
+        
         await _context.SaveChangesAsync();
-        return Ok(category);
+        return Ok(existing);
     }
 
     [HttpDelete("categories/{id}")]
@@ -98,16 +103,25 @@ public class MenuController : ControllerBase
     {
         if (id != item.Id) return BadRequest("Lỗi dữ liệu: ID không khớp");
 
+        var existing = await _context.MenuItems.FindAsync(id);
+        if (existing == null) return NotFound();
+
         // Check for old image clean up
-        var existing = await _context.MenuItems.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        if (existing != null && !string.IsNullOrEmpty(existing.ImagePath) && existing.ImagePath != item.ImagePath)
+        if (!string.IsNullOrEmpty(existing.ImagePath) && existing.ImagePath != item.ImagePath)
         {
-             DeleteImageFile(existing.ImagePath); // Deletes from Cloudinary
+             DeleteImageFile(existing.ImagePath); 
         }
 
-        _context.Entry(item).State = EntityState.Modified;
+        existing.Name = item.Name;
+        existing.Price = item.Price;
+        existing.CategoryId = item.CategoryId;
+        existing.ImagePath = item.ImagePath;
+        existing.Description = item.Description;
+        existing.IsActive = item.IsActive;
+        // Keep existing.CreatedAt
+
         await _context.SaveChangesAsync();
-        return Ok(item);
+        return Ok(existing);
     }
 
     [HttpPost("items/{id}/toggle")]

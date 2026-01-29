@@ -121,8 +121,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                 
                 // Patch for missing columns from older versions
                 db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
-                db.Database.ExecuteSqlRaw("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(18,2) DEFAULT 0;");
                 db.Database.ExecuteSqlRaw("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount DECIMAL(18,2) DEFAULT 0;");
+                db.Database.ExecuteSqlRaw("ALTER TABLE categories ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;");
+                db.Database.ExecuteSqlRaw("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;");
                 
                 // Fix: Sanitize inconsistent table states on startup (Ghost Occupied Tables)
                 db.Database.ExecuteSqlRaw("UPDATE tables SET is_occupied = false, status = 'Empty' WHERE current_order_id IS NULL AND is_occupied = true;");
