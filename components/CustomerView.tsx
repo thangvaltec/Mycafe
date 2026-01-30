@@ -43,6 +43,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   const [billiardSession, setBilliardSession] = useState<BilliardSession | null>(null);
   const [durationStr, setDurationStr] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Fetch Billiard Session Loop
   React.useEffect(() => {
@@ -74,10 +75,19 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       setDurationStr(`${h} giờ ${m} phút`);
     };
     updateTimer();
-    const interval = setInterval(updateTimer, 60000); // Update every minute to save CPU, user asked for clock but min precision is fine usually. 15s?
-    // User said "tinh theo tung s/phut" in previous prompt. Let's do 10s.
+    const interval = setInterval(updateTimer, 60000);
     return () => clearInterval(interval);
   }, [billiardSession]);
+
+  // Scroll detection for scroll-to-top button
+  React.useEffect(() => {
+    const handleScroll = () => {
+      // Show button when scrolled past category section (~250px)
+      setShowScrollTop(window.scrollY > 250);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
 
 
@@ -363,6 +373,17 @@ const CustomerView: React.FC<CustomerViewProps> = ({
           </div>
         ))}
       </div>
+
+      {/* SCROLL TO TOP BUTTON */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed right-3 top-24 z-[100] bg-[#4B3621]/90 text-white rounded-xl shadow-xl backdrop-blur-sm transition-all active:scale-95 hover:bg-[#4B3621] flex items-center gap-2 py-2.5 px-4 animate-fade-in border border-white/20"
+        >
+          <i className="fas fa-chevron-up text-xs"></i>
+          <span className="text-[10px] font-black tracking-wide whitespace-nowrap">VỀ ĐẦU TRANG</span>
+        </button>
+      )}
 
       {/* 4. GIỎ HÀNG NỔI */}
       {itemCount > 0 && (
