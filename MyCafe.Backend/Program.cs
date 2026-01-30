@@ -51,7 +51,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             // Port 6543 = Transaction Mode (No Pooling, No AutoPrepare)
             // Port 5432 = Session Mode (MUST LIMIT POOL SIZE AGGRESSIVELY)
             Pooling = uri.Port == 5432,
-            MaxPoolSize = uri.Port == 5432 ? 1 : 0, // EMERGENCY: Reduced to 1 (was 2) - Still hitting pool limit!
+            MaxPoolSize = uri.Port == 5432 ? 2 : 0, // Reverted to 2 for better performance - user will minimize logins
             MinPoolSize = 0, // Don't keep idle connections
             ConnectionLifetime = 300, // 5 minutes - Force connection refresh to prevent stale connections
             ConnectionIdleLifetime = 60, // Close idle connections after 60 seconds
