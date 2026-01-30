@@ -373,15 +373,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                 <div className="w-full md:w-[45%] bg-white flex flex-col flex-1 overflow-hidden relative rounded-t-[32px] md:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.05)] md:shadow-none pb-safe">
 
                     {/* Payment Method Tabs */}
-                    <div className="p-1 m-4 sm:m-6 mb-2 bg-gray-100 rounded-[24px] flex relative shrink-0">
-                        <div className={`absolute inset-y-1 w-1/2 bg-white rounded-[20px] shadow-sm transition-transform duration-300 ease-out ${activeTab === 'transfer' ? 'translate-x-[100%]' : 'translate-x-0'}`}></div>
+                    <div className="p-1 m-3 mb-2 bg-gray-100 rounded-[20px] flex relative shrink-0">
+                        <div className={`absolute inset-y-1 w-1/2 bg-white rounded-[18px] shadow-sm transition-transform duration-300 ease-out ${activeTab === 'transfer' ? 'translate-x-[100%]' : 'translate-x-0'}`}></div>
 
-                        <button onClick={() => setActiveTab('cash')} className={`relative z-10 flex-1 py-3 md:py-4 rounded-[20px] text-[11px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${activeTab === 'cash' ? 'text-[#4B3621]' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-money-bill-wave text-lg"></i>
+                        <button onClick={() => setActiveTab('cash')} className={`relative z-10 flex-1 py-2 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 ${activeTab === 'cash' ? 'text-[#4B3621]' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-money-bill-wave text-sm"></i>
                             Tiền mặt
                         </button>
-                        <button onClick={() => setActiveTab('transfer')} className={`relative z-10 flex-1 py-3 md:py-4 rounded-[20px] text-[11px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${activeTab === 'transfer' ? 'text-[#4B3621]' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-qrcode text-lg"></i>
+                        <button onClick={() => setActiveTab('transfer')} className={`relative z-10 flex-1 py-2 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 ${activeTab === 'transfer' ? 'text-[#4B3621]' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-qrcode text-sm"></i>
                             Chuyển khoản
                         </button>
                     </div>
@@ -392,8 +392,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                         {/* CASH VIEW */}
                         <div className={`transition-all duration-300 ${activeTab === 'cash' ? 'block opacity-100' : 'hidden opacity-0'}`}>
                             <div className="space-y-6 animate-fade-in pb-20"> {/* Extra padding bottom for scroll */}
-                                <div className="space-y-3">
-                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">KHÁCH ĐƯA (VNĐ)</label>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">KHÁCH ĐƯA (VNĐ)</label>
                                     <div className="relative group">
                                         <input
                                             autoFocus={activeTab === 'cash'}
@@ -401,25 +401,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                                             inputMode="numeric"
                                             value={receivedAmountStr}
                                             onChange={(e) => setReceivedAmountStr(handleMoneyInput(e.target.value))}
-                                            className="w-full bg-white border-2 border-[#E5E7EB] focus:border-[#C2A383] rounded-2xl py-5 px-6 text-right text-3xl font-black text-[#4B3621] outline-none transition-all placeholder-gray-300 shadow-sm"
+                                            className="w-full bg-white border-2 border-[#E5E7EB] focus:border-[#C2A383] rounded-xl py-3 px-5 text-right text-2xl font-black text-[#4B3621] outline-none transition-all placeholder-gray-300 shadow-sm"
                                             placeholder="0"
                                         />
                                         {/* Clear Button inside Input */}
                                         {receivedAmountStr && (
-                                            <button onClick={() => setReceivedAmountStr('')} className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500">
-                                                <i className="fas fa-times text-xs"></i>
+                                            <button onClick={() => setReceivedAmountStr('')} className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500">
+                                                <i className="fas fa-times text-[10px]"></i>
                                             </button>
                                         )}
                                     </div>
 
                                     {/* Quick Suggestions - Fixed Grid */}
-                                    <p className="text-[9px] font-bold text-gray-300 uppercase tracking-widest mt-4 mb-2 ml-1">Gợi ý nhanh</p>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <p className="text-[8px] font-bold text-gray-300 uppercase tracking-widest mt-3 mb-1.5 ml-1">Gợi ý nhanh</p>
+                                    <div className="grid grid-cols-3 gap-1.5">
                                         {quickAmounts.map(amt => (
                                             <button
                                                 key={amt}
                                                 onClick={() => setReceivedAmountStr(formatVND(amt))}
-                                                className={`px-2 py-3 border rounded-xl text-[11px] font-black transition-all active:scale-95 flex flex-col items-center justify-center
+                                                className={`px-1.5 py-2 border rounded-lg text-[10px] font-black transition-all active:scale-95 flex flex-col items-center justify-center
                                                     ${receivedAmount === amt
                                                         ? 'bg-[#4B3621] text-white border-[#4B3621] shadow-md'
                                                         : 'bg-white border-gray-200 text-gray-600 hover:border-[#C2A383] hover:text-[#C2A383]'

@@ -278,23 +278,43 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
       {selectedOrderForDetail && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedOrderForDetail(null)}></div>
-          <div className="relative bg-[#FDFCF8] rounded-[40px] p-8 w-full max-w-sm shadow-2xl animate-fade-in flex flex-col border border-white/20">
+          <div className="relative bg-[#FDFCF8] rounded-[40px] p-8 w-full max-w-sm shadow-2xl animate-fade-in flex flex-col border border-white/20 max-h-[98vh]">
             <h3 className="text-2xl font-black text-[#4B3621] uppercase tracking-tighter mb-1 text-center">Chi tiết món gọi</h3>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] text-center mb-6">Bàn {tables.find(t => String(t.id) === String(selectedOrderForDetail.tableId))?.tableNumber || '?'}</p>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 pr-2 max-h-[50vh]">
+            <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 pr-2">
               <div className="space-y-3">
-                {selectedOrderForDetail.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-4 rounded-2xl border border-gray-100 shadow-sm odd:bg-[#FAF9F6] even:bg-white">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#EAE8E4] text-[#4B3621] font-black text-xs flex items-center justify-center border border-white shadow-inner">
-                        x{item.quantity}
+                {selectedOrderForDetail.items
+                  .map((item, idx) => {
+                    const timeKey = `order_item_time_${selectedOrderForDetail.id}_${item.id}`;
+                    let orderTime = localStorage.getItem(timeKey);
+                    if (!orderTime) {
+                      orderTime = new Date().toISOString();
+                      localStorage.setItem(timeKey, orderTime);
+                    }
+                    return { ...item, orderTime, originalIndex: idx };
+                  })
+                  .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
+                  .map((item) => {
+                    const timeDisplay = new Date(item.orderTime).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+
+                    return (
+                      <div key={item.originalIndex} className="flex justify-between items-center p-4 rounded-2xl border border-gray-100 shadow-sm odd:bg-[#FAF9F6] even:bg-white">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[9px] text-gray-400 font-bold shrink-0 w-10">{timeDisplay}</span>
+                          <div className="w-8 h-8 rounded-lg bg-[#EAE8E4] text-[#4B3621] font-black text-xs flex items-center justify-center border border-white shadow-inner">
+                            x{item.quantity}
+                          </div>
+                          <span className="text-sm font-bold text-[#4B3621] leading-tight">{item.productName}</span>
+                        </div>
+                        <span className="text-xs font-black text-[#C2A383]">{new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}</span>
                       </div>
-                      <span className="text-sm font-bold text-[#4B3621] leading-tight">{item.productName}</span>
-                    </div>
-                    <span className="text-xs font-black text-[#C2A383]">{new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}</span>
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
             </div>
 
