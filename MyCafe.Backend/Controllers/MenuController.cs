@@ -24,6 +24,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> GetCategories()
     {
         var categories = await _context.Categories
+            .AsNoTracking()
             .OrderBy(c => c.CreatedAt)
             .ToListAsync();
         return Ok(categories);
@@ -77,6 +78,7 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> GetMenuItems()
     {
         var items = await _context.MenuItems
+            .AsNoTracking()
             .Include(m => m.Category)
             .OrderBy(m => m.CreatedAt)
             .ToListAsync();

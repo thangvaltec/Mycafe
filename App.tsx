@@ -52,10 +52,8 @@ const App: React.FC = () => {
       setOrders(o);
       setExpenses(e || []);
 
-      // TẠM THỜI: Đợi 5 giây để bạn xem giao diện Loading mới (bóng bida & café)
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 5000);
+      // FIXED: Remove artificial 5-second delay - load immediately!
+      setIsLoading(false);
 
     } catch (err) {
       console.error("Failed to load data", err);
@@ -87,9 +85,10 @@ const App: React.FC = () => {
       setIsLoading(false); // If not logged in & not table, stop loading
     }
 
+    // FIXED: Changed from 5s to 30s to prevent connection pool exhaustion
     const interval = setInterval(() => {
       if (isLoggedIn || isQRCodeAccess) loadData();
-    }, 5000);
+    }, 30000); // 30 seconds instead of 5 seconds
 
     return () => {
       clearInterval(interval);

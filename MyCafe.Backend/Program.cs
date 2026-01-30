@@ -47,23 +47,28 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             Password = userInfo[1],
             Database = uri.AbsolutePath.TrimStart('/'),
             SslMode = Npgsql.SslMode.Require,
-            // Smart Configuration for Supabase
+            // AGGRESSIVE Configuration for Supabase Free Tier
             // Port 6543 = Transaction Mode (No Pooling, No AutoPrepare)
-            // Port 5432 = Session Mode (Default Pooling is fine, but MUST LIMIT SIZE)
+            // Port 5432 = Session Mode (MUST LIMIT POOL SIZE AGGRESSIVELY)
             Pooling = uri.Port == 5432,
-            MaxPoolSize = uri.Port == 5432 ? 3 : 0, // CRITICAL: Supabase Free Pooler has limit ~15. We limit app to 3 to be safe.
-            MaxAutoPrepare = uri.Port == 5432 ? 20 : 0
+            MaxPoolSize = uri.Port == 5432 ? 2 : 0, // CRITICAL: Reduced to 2 (was 3) - Supabase Free has ~15 total limit
+            MinPoolSize = 0, // Don't keep idle connections
+            ConnectionLifetime = 300, // 5 minutes - Force connection refresh to prevent stale connections
+            ConnectionIdleLifetime = 60, // Close idle connections after 60 seconds
+            MaxAutoPrepare = uri.Port == 5432 ? 10 : 0, // Reduced from 20 to save memory
+            Timeout = 60, // Connection timeout: 60 seconds (was default 15s)
+            CommandTimeout = 60 // Command timeout: 60 seconds
         };
         connString = connBuilder.ToString();
     }
 
     options.UseNpgsql(connString, npgsqlOptions => {
         npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 10, // Increased retry count
-            maxRetryDelay: TimeSpan.FromSeconds(30), // Increased delay
+            maxRetryCount: 15, // Increased retry count for slow cold starts
+            maxRetryDelay: TimeSpan.FromSeconds(60), // Increased delay to 60s
             errorCodesToAdd: null
         );
-        npgsqlOptions.CommandTimeout(30); // Prevent long hanging queries
+        npgsqlOptions.CommandTimeout(60); // Prevent long hanging queries - increased to 60s
     });
 });
 
@@ -127,6 +132,39 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                 
                 // Fix: Sanitize inconsistent table states on startup (Ghost Occupied Tables)
                 db.Database.ExecuteSqlRaw("UPDATE tables SET is_occupied = false, status = 'Empty' WHERE current_order_id IS NULL AND is_occupied = true;");
+                
+                // CRITICAL FIX: Clean up duplicate active orders (keep oldest, cancel rest)
+                Console.WriteLine("[DB INIT] Cleaning up duplicate active orders...");
+                var duplicatesFixed = db.Database.ExecuteSqlRaw(@"
+                    UPDATE orders
+                    SET status = 'CANCELLED'
+                    WHERE id IN (
+                        SELECT id FROM (
+                            SELECT id, ROW_NUMBER() OVER (
+                                PARTITION BY table_id 
+                                ORDER BY created_at ASC
+                            ) as rn
+                            FROM orders
+                            WHERE status NOT IN ('PAID', 'CANCELLED')
+                        ) sub
+                        WHERE rn > 1
+                    );
+                ");
+                if (duplicatesFixed > 0) Console.WriteLine($"[DB INIT] Cancelled {duplicatesFixed} duplicate orders");
+                
+                // FIX: Sync table.CurrentOrderId for tables with active orders but null CurrentOrderId
+                Console.WriteLine("[DB INIT] Syncing table CurrentOrderId...");
+                var syncedTables = db.Database.ExecuteSqlRaw(@"
+                    UPDATE tables t
+                    SET current_order_id = o.id,
+                        is_occupied = true,
+                        status = 'Ordering'
+                    FROM orders o
+                    WHERE o.table_id = t.id
+                      AND o.status NOT IN ('PAID', 'CANCELLED')
+                      AND t.current_order_id IS NULL;
+                ");
+                if (syncedTables > 0) Console.WriteLine($"[DB INIT] Synced {syncedTables} tables with active orders");
                 
                 Console.WriteLine("[DB INIT] Schema verified.");
             } 

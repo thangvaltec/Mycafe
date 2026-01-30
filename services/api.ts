@@ -4,10 +4,19 @@ import { Category, Expense, Product, Order, PaymentMethod, Table, BilliardSessio
 // Assuming Backend runs on the same machine but on port 5238.
 export const API_URL = ((import.meta as any).env.VITE_API_URL as string) || `http://${window.location.hostname}:5238/api`;
 
-// --- Helper ---
+// --- Helper with Timeout ---
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    // CRITICAL FIX: Add 30-second timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds
+
     try {
-        const res = await fetch(`${API_URL}${endpoint}`, options);
+        const res = await fetch(`${API_URL}${endpoint}`, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         if (!res.ok) {
             const text = await res.text();
             // Translate common HTTP errors if backend returns raw status
@@ -20,6 +29,13 @@ const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> 
         }
         return res.json();
     } catch (err: any) {
+        clearTimeout(timeoutId);
+
+        // Handle timeout
+        if (err.name === 'AbortError') {
+            throw new Error('Yêu cầu quá lâu (timeout 30s). Vui lòng thử lại.');
+        }
+
         // Translate Network Errors
         const msg = err.message || err.toString();
         if (

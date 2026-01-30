@@ -55,28 +55,33 @@ public class OrderController : ControllerBase
         Order order;
         bool isNewOrder = false;
 
-        // Check if there's an active order for this table
-        if (table.CurrentOrderId != null)
+        // CRITICAL FIX: Always check DB for active orders FIRST (not just table.CurrentOrderId)
+        // This prevents duplicate orders when CurrentOrderId is null but active orders exist
+        var existingActiveOrder = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => 
+                o.TableId == request.TableId && 
+                o.Status != "PAID" && 
+                o.Status != "CANCELLED");
+
+        if (existingActiveOrder != null)
         {
-            var existingOrder = await _context.Orders
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == table.CurrentOrderId);
-                
-            if (existingOrder == null || existingOrder.Status == "PAID")
+            // Use existing order
+            order = existingActiveOrder;
+            
+            // FIX: Sync table.CurrentOrderId if it's wrong/null
+            if (table.CurrentOrderId != order.Id)
             {
-                // Should not happen if logic is correct, but safe fallback
-                isNewOrder = true;
-                order = CreateNewOrder(table.Id);
-            }
-            else 
-            {
-                order = existingOrder;
+                table.CurrentOrderId = order.Id;
+                Console.WriteLine($"[ORDER FIX] Table {table.Id} had wrong CurrentOrderId, synced to {order.Id}");
             }
         }
         else
         {
+            // No active order found - create new one
             isNewOrder = true;
             order = CreateNewOrder(table.Id);
+            Console.WriteLine($"[ORDER] Creating new order for Table {table.Id}");
         }
 
         // Add items

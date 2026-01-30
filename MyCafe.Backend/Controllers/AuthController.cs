@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using MyCafe.Backend.Data;
 using MyCafe.Backend.Models;
 
@@ -16,15 +17,29 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var user = _context.Users.FirstOrDefault(u => u.Username == request.Username && u.Password == request.Password);
-        
-        if (user != null)
+        try
         {
-            return Ok(new { Token = $"valid-{user.Role.ToLower()}-token", Role = user.Role });
+            var user = await _context.Users
+                .AsNoTracking() // Don't track - we're just reading
+                .FirstOrDefaultAsync(u => u.Username == request.Username && u.Password == request.Password);
+            
+            if (user != null)
+            {
+                Console.WriteLine($"[LOGIN] Success: {user.Username} ({user.Role})");
+                return Ok(new { Token = $"valid-{user.Role.ToLower()}-token", Role = user.Role });
+            }
+            
+            Console.WriteLine($"[LOGIN] Failed: Invalid credentials for {request.Username}");
+            return Unauthorized("Tài khoản hoặc mật khẩu không chính xác");
         }
-        return Unauthorized("Tài khoản hoặc mật khẩu không chính xác");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LOGIN ERROR] {ex.Message}");
+            if (ex.InnerException != null) Console.WriteLine($"[LOGIN INNER] {ex.InnerException.Message}");
+            return StatusCode(500, "Lỗi đăng nhập - vui lòng thử lại");
+        }
     }
 }
 

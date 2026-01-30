@@ -19,7 +19,10 @@ public class TableController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTables()
     {
-        var tables = await _context.Tables.OrderBy(t => t.Id).ToListAsync();
+        var tables = await _context.Tables
+            .AsNoTracking()
+            .OrderBy(t => t.Id)
+            .ToListAsync();
         return Ok(tables);
     }
 
