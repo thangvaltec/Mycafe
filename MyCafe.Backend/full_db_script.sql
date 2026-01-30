@@ -209,7 +209,8 @@ INSERT INTO categories (id, name, created_at) VALUES
 ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b77', '🧋 TRÀ SỮA', NOW() + interval '7 seconds'),
 ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b88', '🥤 NƯỚC GIẢI KHÁT', NOW() + interval '8 seconds'),
 ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b99', '🌻 ĂN VẶT', NOW() + interval '9 seconds'),
-('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380baa', '🎱 BILLIARDS', NOW() + interval '10 seconds');
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380bbb', '🥣 SỮA CHUA', NOW() + interval '10 seconds'),
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380baa', '🎱 BILLIARDS', NOW() + interval '11 seconds');
 
 -- Menu Items
 INSERT INTO menu_items (id, category_id, name, price, is_active, description, image_path, created_at) VALUES 
@@ -259,8 +260,13 @@ INSERT INTO menu_items (id, category_id, name, price, is_active, description, im
 
 -- 🌻 ĂN VẶT
 (gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b99', 'Hạt hướng dương', 10000, true, '', '', NOW() + interval '39 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b99', 'Thuốc Thăng Long', 18000, true, '', '', NOW() + interval '40 seconds'),
+
+-- 🥣 SỮA CHUA
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380bbb', 'Sữa chua đánh đá', 25000, true, '', '', NOW() + interval '41 seconds'),
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380bbb', 'Sữa chua kiểu Mạch', 30000, true, '', '', NOW() + interval '42 seconds'),
 
 -- 🎱 BILLIARDS
-(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380baa', 'Tiền giờ bàn billiards', 40000, true, 'Giá mỗi giờ', '', NOW() + interval '40 seconds');
+(gen_random_uuid(), 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380baa', 'Tiền giờ bàn billiards', 40000, true, 'Giá mỗi giờ', '', NOW() + interval '43 seconds');
 
 COMMIT;

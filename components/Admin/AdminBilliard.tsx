@@ -44,7 +44,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
     const [activeFormTable, setActiveFormTable] = useState<string | null>(null);
     const [guestName, setGuestName] = useState('');
     const [numPeople, setNumPeople] = useState('2');
-    const [pricePerHourStr, setPricePerHourStr] = useState('20.000');
+    const [pricePerHourStr, setPricePerHourStr] = useState('40.000');
 
     const [checkoutSession, setCheckoutSession] = useState<BilliardSession | null>(null);
     const [startTimeStr, setStartTimeStr] = useState('');
