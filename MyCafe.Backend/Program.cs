@@ -93,6 +93,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     app.UseCors("AllowAll");
     app.UseStaticFiles(); 
     app.MapControllers();
+    
+    // Lightweight ping endpoint for keep-alive (does NOT touch database)
+    app.MapGet("/ping", () => Results.Ok(new { status = "alive", time = DateTime.UtcNow }));
+    
     app.MapFallbackToFile("index.html");
 
     // Ensure DB is created & Seed Data
