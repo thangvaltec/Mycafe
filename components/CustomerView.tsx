@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Product, Category, Order, OrderItem, OrderStatus, Table, BilliardSession } from '../types';
 import { formatVND, getImageUrl } from '../utils/format';
 import { api } from '../services/api';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface CustomerViewProps {
   table: Table;
@@ -44,6 +45,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   const [durationStr, setDurationStr] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showWifiQR, setShowWifiQR] = useState(false);
 
   // Fetch Billiard Session Loop
   React.useEffect(() => {
@@ -222,9 +224,24 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       {/* 2. CHỌN NHANH DANH MỤC (SẼ TRÔI ĐI KHI CUỘN) */}
       <section className="px-3 mt-4">
         <div className="bg-white p-2.5 rounded-[20px] shadow-sm border border-[#C2A383]/10">
-          <div className="flex items-center gap-1.5 mb-3 px-1">
-            <i className="fas fa-th-large text-[#C2A383] text-[9px]"></i>
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Chọn món nhanh</span>
+          {/* Header with WiFi info */}
+          <div className="flex items-center justify-between mb-3 px-1 gap-2">
+            <div className="flex items-center gap-1.5">
+              <i className="fas fa-th-large text-[#C2A383] text-[9px]"></i>
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Chọn món nhanh</span>
+            </div>
+            {/* WiFi Info - Inline */}
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-cyan-50 px-2.5 py-1.5 rounded-lg flex-1 min-w-0">
+              <i className="fas fa-wifi text-blue-500 text-[9px] shrink-0"></i>
+              <span className="text-[9px] font-bold text-gray-700">Chạm vào QR để kết nối WiFi</span>
+              <button
+                onClick={() => setShowWifiQR(true)}
+                className="ml-1 w-6 h-6 bg-blue-500 text-white rounded-lg flex items-center justify-center shrink-0 hover:bg-blue-600 transition-colors active:scale-95"
+                title="Xem mã QR WiFi"
+              >
+                <i className="fas fa-qrcode text-[10px]"></i>
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-1.5 px-0.5">
             {categories.map(cat => (
@@ -238,6 +255,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
               </button>
             ))}
           </div>
+
         </div>
       </section>
 
@@ -464,6 +482,51 @@ const CustomerView: React.FC<CustomerViewProps> = ({
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-relaxed">
                 Yêu cầu của quý khách đã được gửi đi. Vui lòng đợi trong giây lát!
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WiFi QR Code Modal */}
+      {showWifiQR && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowWifiQR(false)}></div>
+          <div className="relative bg-white rounded-[32px] p-6 shadow-2xl animate-slide-up max-w-sm w-full">
+            <button
+              onClick={() => setShowWifiQR(false)}
+              className="absolute top-4 right-4 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+            >
+              <i className="fas fa-times text-gray-600 text-xs"></i>
+            </button>
+
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-wifi text-white text-xl"></i>
+              </div>
+              <h3 className="text-lg font-black text-[#4B3621] mb-2">Kết nối WiFi</h3>
+              <p className="text-xs text-gray-500 mb-6">Quét mã QR để kết nối tự động</p>
+
+              {/* QR Code */}
+              <div className="bg-white p-4 rounded-2xl border-2 border-gray-100 inline-block mb-4">
+                <QRCodeSVG
+                  value="WIFI:T:WPA;S:BONG COFFEE BILLIARDS;P:68686868;;"
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+
+              {/* WiFi Info */}
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-bold text-gray-500 uppercase">Tên WiFi</span>
+                  <span className="text-xs font-black text-gray-700">BONG COFFEE BILLIARDS</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-gray-500 uppercase">Mật khẩu</span>
+                  <span className="text-xs font-black text-gray-700">68686868</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
