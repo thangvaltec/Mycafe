@@ -156,6 +156,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                 ");
                 if (duplicatesFixed > 0) Console.WriteLine($"[DB INIT] Cancelled {duplicatesFixed} duplicate orders");
                 
+                // CRITICAL FIX: Clean up duplicate active billiard sessions (keep newest, set rest to PAID)
+                Console.WriteLine("[DB INIT] Cleaning up duplicate active billiard sessions...");
+                var sessionsFixed = db.Database.ExecuteSqlRaw(@"
+                    UPDATE billiard_sessions
+                    SET status = 'PAID', end_time = CURRENT_TIMESTAMP
+                    WHERE id IN (
+                        SELECT id FROM (
+                            SELECT id, ROW_NUMBER() OVER (
+                                PARTITION BY table_id 
+                                ORDER BY start_time DESC
+                            ) as rn
+                            FROM billiard_sessions
+                            WHERE status = 'ACTIVE'
+                        ) sub
+                        WHERE rn > 1
+                    );
+                ");
+                if (sessionsFixed > 0) Console.WriteLine($"[DB INIT] Closed {sessionsFixed} duplicate active sessions");
+
                 // FIX: Sync table.CurrentOrderId for tables with active orders but null CurrentOrderId
                 Console.WriteLine("[DB INIT] Syncing table CurrentOrderId...");
                 var syncedTables = db.Database.ExecuteSqlRaw(@"

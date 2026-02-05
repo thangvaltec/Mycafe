@@ -252,7 +252,13 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
     const activeSessionMap = sessions.reduce((acc, s) => {
         let t = mappingTables.find(tbl => String(tbl.id) === String(s.tableId));
         if (t && t.tableNumber) {
-            acc[t.tableNumber] = s;
+            // FIX: If multiple active sessions exist for the same table, 
+            // the newest one (first in sorted list) should take priority.
+            if (!acc[t.tableNumber]) {
+                acc[t.tableNumber] = s;
+            } else {
+                console.warn(`[AdminBilliard] Duplicate active sessions found for table ${t.tableNumber}. Picking newest.`);
+            }
         }
         return acc;
     }, {} as Record<string, BilliardSession>);

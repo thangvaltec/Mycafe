@@ -91,7 +91,9 @@ public class BilliardController : ControllerBase
     public async Task<IActionResult> GetBill(int tableId)
     {
         var session = await _context.BilliardSessions
-            .FirstOrDefaultAsync(s => s.TableId == tableId && s.Status == "ACTIVE");
+            .Where(s => s.TableId == tableId && s.Status == "ACTIVE")
+            .OrderByDescending(s => s.StartTime)
+            .FirstOrDefaultAsync();
 
         var order = await _context.Orders
             .Include(o => o.Items)
@@ -160,9 +162,14 @@ public class BilliardController : ControllerBase
 
         try
         {
-            var session = await _context.BilliardSessions
-                .FirstOrDefaultAsync(s => s.TableId == tableId && s.Status == "ACTIVE");
-            Console.WriteLine($"[Checkout] Found Session: {session?.Id} (Status: {session?.Status})");
+            // 1. Fetch ALL active sessions for this table (to handle duplicates)
+            var sessions = await _context.BilliardSessions
+                .Where(s => s.TableId == tableId && s.Status == "ACTIVE")
+                .OrderByDescending(s => s.StartTime)
+                .ToListAsync();
+            
+            var session = sessions.FirstOrDefault();
+            Console.WriteLine($"[Checkout] Found {sessions.Count} Active Session(s): Primary={session?.Id} (Status: {session?.Status})");
 
             var order = await _context.Orders
                 .Include(o => o.Items)
@@ -191,13 +198,13 @@ public class BilliardController : ControllerBase
                 Discount = request.Discount
             };
 
-            // 1. Process Session & Time Fee
+            // 2. Process Sessions & Time Fee
             decimal timeAmount = 0;
             string timeDescription = "Tiền giờ";
-            
+
             if (session != null)
             {
-                // Verify Manual Start Time if provided
+                // Verify Manual Start Time if provided (apply to the primary session)
                 if (request.FinalStartTime.HasValue) 
                 {
                     session.StartTime = request.FinalStartTime.Value;
@@ -207,9 +214,14 @@ public class BilliardController : ControllerBase
                 timeAmount = Math.Ceiling(((decimal)duration.TotalHours * session.PricePerHour) / 1000) * 1000;
                 timeDescription = $"Tiền giờ ({duration.Hours}h {duration.Minutes}m)";
                 
-                session.EndTime = finalEndTime;
-                session.TotalAmount = timeAmount;
-                session.Status = "PAID"; // Mark session as closed
+                // Close ALL active sessions for this table to prevent ghost sessions
+                foreach (var s in sessions)
+                {
+                    s.EndTime = finalEndTime;
+                    s.Status = "PAID";
+                    // Only the primary session gets the calculated total amount
+                    s.TotalAmount = (s.Id == session.Id) ? timeAmount : 0;
+                }
             }
 
             // 2. Ensure Order Exists for Reporting (Unified Transaction)
