@@ -125,6 +125,17 @@ export const api = {
         return res.json(); // { path: "..." }
     },
 
+    // Orders - Smart Polling (Zero DB access check)
+    checkNewOrders: (lastCheckTime: string) => fetchApi<{
+        hasNew: boolean,
+        latestTime: string,
+        orders: Array<{
+            tableId: number,
+            tableName: string,
+            items: Array<{ name: string, quantity: number }>
+        }>
+    }>(`/order/check-new?lastCheckTime=${encodeURIComponent(lastCheckTime)}`),
+
     // Orders
     getOrders: () => fetchApi<Order[]>('/order'),
     getOrderForTable: (tableId: string) => fetchApi<Order>(`/order/table/${tableId}`).catch(() => null),

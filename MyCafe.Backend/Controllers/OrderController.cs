@@ -12,9 +12,44 @@ public class OrderController : ControllerBase
 {
     private readonly AppDbContext _context;
 
+    // ===== IN-MEMORY NOTIFICATION QUEUE (No DB access for polling) =====
+    private static readonly List<OrderNotification> _notifications = new();
+    private static readonly object _lock = new();
+
     public OrderController(AppDbContext context)
     {
         _context = context;
+    }
+
+    // ===== SMART POLLING: Check for new orders (Zero DB access) =====
+    [HttpGet("check-new")]
+    public IActionResult CheckNewOrders([FromQuery] string lastCheckTime)
+    {
+        if (!DateTime.TryParse(lastCheckTime, null, System.Globalization.DateTimeStyles.RoundtripKind, out var clientLastCheck))
+        {
+            return BadRequest("Invalid lastCheckTime format. Use ISO 8601.");
+        }
+
+        List<OrderNotification> newOrders;
+        DateTime latestTime;
+
+        lock (_lock)
+        {
+            newOrders = _notifications.Where(n => n.Time > clientLastCheck).ToList();
+            latestTime = _notifications.Count > 0 ? _notifications.Max(n => n.Time) : clientLastCheck;
+        }
+
+        return Ok(new
+        {
+            hasNew = newOrders.Count > 0,
+            latestTime = latestTime.ToString("o"),
+            orders = newOrders.Select(n => new
+            {
+                tableId = n.TableId,
+                tableName = n.TableName,
+                items = n.Items
+            })
+        });
     }
 
     [HttpGet]
@@ -131,6 +166,29 @@ public class OrderController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        // ===== PUSH TO NOTIFICATION QUEUE after successful save =====
+        var itemsList = request.Items.Select(i => new NotificationItem
+        {
+            Name = i.ProductName,
+            Quantity = i.Quantity
+        }).ToList();
+
+        lock (_lock)
+        {
+            _notifications.Add(new OrderNotification
+            {
+                Time = DateTime.UtcNow,
+                TableId = table.Id,
+                TableName = table.Name ?? $"Bàn {table.Id}",
+                Items = itemsList
+            });
+
+            // Auto-clean: remove entries older than 5 minutes to prevent memory leak
+            var cutoff = DateTime.UtcNow.AddMinutes(-5);
+            _notifications.RemoveAll(n => n.Time < cutoff);
+        }
+        Console.WriteLine($"[NOTIFY] New order queued: Table {table.Name} ({request.Items.Count} items)");
+
         return Ok(order);
     }
     
@@ -218,5 +276,20 @@ public class OrderItemDto
     public Guid? ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public int Quantity { get; set; }
+}
+
+// ===== Notification Models (In-Memory only, not stored in DB) =====
+public class OrderNotification
+{
+    public DateTime Time { get; set; }
+    public int TableId { get; set; }
+    public string TableName { get; set; } = "";
+    public List<NotificationItem> Items { get; set; } = new();
+}
+
+public class NotificationItem
+{
+    public string Name { get; set; } = "";
     public int Quantity { get; set; }
 }

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Table, Product, Order, Category, Expense, OrderItem, OrderStatus, UserRole } from '../types';
 import AdminPOS from './Admin/AdminPOS';
 import AdminOrders from './Admin/AdminOrders';
@@ -48,6 +48,100 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [activeTab, setActiveTab] = useState<'pos' | 'takeaway' | 'expenses' | 'orders' | 'menu' | 'report' | 'billiard' | 'settings'>('pos'); // UPDATED
   const [isStaffOrdering, setIsStaffOrdering] = useState(false);
   const [currentOrderingTable, setCurrentOrderingTable] = useState<Table | { id: string, name: string, guestName?: string } | null>(null);
+
+  // ===== NOTIFICATION SYSTEM (Queue-based) =====
+  interface ToastData {
+    tableName: string;
+    tableId: number;
+    items: Array<{ name: string; quantity: number }>;
+  }
+  const [currentToast, setCurrentToast] = useState<ToastData | null>(null);
+  const toastQueueRef = useRef<ToastData[]>([]);
+  const lastCheckTimeRef = useRef<string>(new Date().toISOString());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+
+  // Initialize audio element once
+  useEffect(() => {
+    audioRef.current = new Audio('/sounds/notification.mp3');
+    audioRef.current.volume = 0.7;
+  }, []);
+
+  // Show the next toast from the queue
+  const showNextToast = useCallback(() => {
+    // Clear any existing timer
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+
+    if (toastQueueRef.current.length > 0) {
+      const next = toastQueueRef.current.shift()!;
+      setCurrentToast(next);
+
+      // Play sound for each new toast
+      if (isSoundEnabled && audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => { });
+      }
+
+      // Auto-dismiss after 20 seconds, then show next
+      toastTimerRef.current = setTimeout(() => {
+        setCurrentToast(null);
+        // Show next in queue after a brief pause
+        setTimeout(() => showNextToast(), 300);
+      }, 20000);
+    } else {
+      setCurrentToast(null);
+    }
+  }, [isSoundEnabled]);
+
+  // Dismiss current toast and show next
+  const dismissToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setCurrentToast(null);
+    // Show next in queue after a brief pause
+    setTimeout(() => showNextToast(), 300);
+  }, [showNextToast]);
+
+  // Smart Polling: Check for new orders every 15 seconds
+  useEffect(() => {
+    const pollNewOrders = async () => {
+      try {
+        const result = await api.checkNewOrders(lastCheckTimeRef.current);
+        if (result.hasNew && result.orders.length > 0) {
+          // Update last check time to latest server time
+          lastCheckTimeRef.current = result.latestTime;
+
+          // Add all new orders to queue
+          const newToasts: ToastData[] = result.orders.map(o => ({
+            tableName: o.tableName || 'Bàn ' + o.tableId,
+            tableId: o.tableId,
+            items: o.items || []
+          }));
+
+          toastQueueRef.current.push(...newToasts);
+
+          // If no toast is currently showing, start showing from queue
+          if (!currentToast) {
+            showNextToast();
+          } else {
+            // Replace current toast with the newest one
+            dismissToast();
+          }
+        }
+      } catch (err) {
+        console.log('[NOTIFY] Polling failed (will retry):', err);
+      }
+    };
+
+    const intervalId = setInterval(pollNewOrders, 15000);
+    return () => clearInterval(intervalId);
+  }, [isSoundEnabled, currentToast, showNextToast, dismissToast]);
 
   const revenue = orders.filter(o => {
     if (o.status !== OrderStatus.PAID) return false;
@@ -175,6 +269,25 @@ const AdminView: React.FC<AdminViewProps> = ({
               <span className="text-lg font-black text-[#2D5A27] leading-none">{revenue.toLocaleString()}đ</span>
             </div>
 
+            {/* Sound Toggle Button */}
+            <button
+              onClick={() => {
+                setIsSoundEnabled(!isSoundEnabled);
+                // Play a short test sound when enabling
+                if (!isSoundEnabled && audioRef.current) {
+                  audioRef.current.currentTime = 0;
+                  audioRef.current.play().catch(() => { });
+                }
+              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border shadow-sm active:scale-95 ${isSoundEnabled
+                ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100'
+                : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
+                }`}
+              title={isSoundEnabled ? 'Tắt âm thanh thông báo' : 'Bật âm thanh thông báo'}
+            >
+              <i className={`fas ${isSoundEnabled ? 'fa-bell' : 'fa-bell-slash'} text-sm`}></i>
+            </button>
+
             {/* Switch Mode Button */}
             <button
               onClick={onSwitchMode}
@@ -265,6 +378,42 @@ const AdminView: React.FC<AdminViewProps> = ({
           )}
         </div>
       </main>
+
+      {/* ===== TOAST NOTIFICATION POPUP ===== */}
+      {currentToast && (
+        <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-[200] animate-slide-in-right">
+          <div className="bg-white border-2 border-amber-300 rounded-2xl shadow-2xl px-5 py-4 min-w-[300px] max-w-[420px]">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                <i className="fas fa-concierge-bell text-amber-600 text-lg"></i>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Đơn hàng mới</p>
+                <p className="text-sm font-bold text-[#4B3621] mt-0.5">
+                  🔔 {currentToast.tableName} vừa gọi món!
+                </p>
+                {currentToast.items.length > 0 && (
+                  <div className="mt-2 space-y-0.5">
+                    {currentToast.items.map((item, idx) => (
+                      <p key={idx} className="text-xs text-gray-600">
+                        <span className="font-bold text-[#4B3621]">{item.quantity}x</span>{' '}
+                        {item.name}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={dismissToast}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+                title="Đóng"
+              >
+                <i className="fas fa-times text-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

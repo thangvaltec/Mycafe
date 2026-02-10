@@ -1,4 +1,4 @@
-export const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+export const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export const authUtils = {
     // Check if session is valid
