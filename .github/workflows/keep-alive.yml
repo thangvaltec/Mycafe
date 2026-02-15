@@ -2,8 +2,8 @@ name: Keep Backend Alive
 
 on:
   schedule:
-    # Chạy mỗi 14 phút, từ 8h sáng đến 10h tối (giờ Việt Nam UTC+7 -> 1h-15h UTC)
-    - cron: '*/14 1-15 * * *'
+    # Chạy mỗi 14 phút, từ 8h sáng đến 12h tối (giờ Việt Nam UTC+7 -> 1h-15h UTC)
+    - cron: '*/14 1-17 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
