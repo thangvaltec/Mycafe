@@ -185,6 +185,9 @@ public class OrderItem
 
     [Column("quantity")]
     public int Quantity { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 [Table("payments")]

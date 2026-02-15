@@ -34,6 +34,7 @@ export interface OrderItem {
   productName: string;
   price: number;
   quantity: number;
+  createdAt?: string;
 }
 
 export interface Order {

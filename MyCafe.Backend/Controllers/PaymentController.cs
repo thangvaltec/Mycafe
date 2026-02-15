@@ -120,6 +120,7 @@ public class PaymentController : ControllerBase
             table.Status = "Empty";
             table.IsOccupied = false;
             table.CurrentOrderId = null;
+            table.GuestName = null; // Clear guest name for next customer
         }
 
         try 

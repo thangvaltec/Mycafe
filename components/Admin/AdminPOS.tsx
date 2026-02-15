@@ -286,12 +286,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
               <div className="space-y-3">
                 {selectedOrderForDetail.items
                   .map((item, idx) => {
-                    const timeKey = `order_item_time_${selectedOrderForDetail.id}_${item.id}`;
-                    let orderTime = localStorage.getItem(timeKey);
-                    if (!orderTime) {
-                      orderTime = new Date().toISOString();
-                      localStorage.setItem(timeKey, orderTime);
-                    }
+                    const orderTime = item.createdAt || selectedOrderForDetail.createdAt;
                     return { ...item, orderTime, originalIndex: idx };
                   })
                   .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())

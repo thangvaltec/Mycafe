@@ -282,12 +282,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                 <div className="space-y-2 overflow-y-auto custom-scrollbar pr-1 flex-1">
                   {activeOrder.items
                     .map((item, idx) => {
-                      const timeKey = `order_item_time_${activeOrder.id}_${item.id}`;
-                      let orderTime = localStorage.getItem(timeKey);
-                      if (!orderTime) {
-                        orderTime = new Date().toISOString();
-                        localStorage.setItem(timeKey, orderTime);
-                      }
+                      const orderTime = item.createdAt || activeOrder.createdAt;
                       return { ...item, orderTime, originalIndex: idx };
                     })
                     .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
@@ -306,7 +301,6 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                                 onClick={() => {
                                   if (window.confirm(`Xóa món "${item.productName}" khỏi đơn?`)) {
                                     onRemoveItem(String(item.id));
-                                    localStorage.removeItem(`order_item_time_${activeOrder.id}_${item.id}`);
                                   }
                                 }}
                                 className="w-5 h-5 shrink-0 rounded-lg bg-red-50 text-red-500 border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors mr-0.5"

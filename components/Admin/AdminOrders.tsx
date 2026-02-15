@@ -93,12 +93,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                     </div>
                     {order.items
                       .map((item, i) => {
-                        const timeKey = `order_item_time_${order.id}_${item.id}`;
-                        let orderTime = localStorage.getItem(timeKey);
-                        if (!orderTime) {
-                          orderTime = new Date().toISOString();
-                          localStorage.setItem(timeKey, orderTime);
-                        }
+                        const orderTime = item.createdAt || order.createdAt;
                         return { ...item, orderTime, originalIndex: i };
                       })
                       .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
@@ -124,7 +119,6 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                                     if (item.quantity <= 1) {
                                       if (window.confirm(`Bạn có chắc muốn xóa món "${item.productName}" không?`)) {
                                         onDeleteOrderItem(String(item.id), order.id);
-                                        localStorage.removeItem(`order_item_time_${order.id}_${item.id}`);
                                       }
                                       return;
                                     }
@@ -159,7 +153,6 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                                   e.stopPropagation();
                                   if (window.confirm(`Bạn có chắc muốn xóa món "${item.productName}" không?`)) {
                                     onDeleteOrderItem(String(item.id), order.id);
-                                    localStorage.removeItem(`order_item_time_${order.id}_${item.id}`);
                                   }
                                 }}
                                 className="px-1.5 py-1 bg-white text-red-500 rounded-lg font-black text-[7px] uppercase tracking-wider border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all shadow-sm whitespace-nowrap flex items-center gap-1 opacity-60 hover:opacity-100 group-hover/item:opacity-100"

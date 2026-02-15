@@ -91,6 +91,7 @@ CREATE TABLE "order_items" (
     "product_name" character varying(200),
     "price" numeric NOT NULL,
     "quantity" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT NOW(),
     CONSTRAINT "PK_order_items" PRIMARY KEY ("id"),
     CONSTRAINT "FK_order_items_menu_items_product_id" FOREIGN KEY ("product_id") REFERENCES "menu_items" ("id"),
     CONSTRAINT "FK_order_items_orders_order_id" FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE
