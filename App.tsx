@@ -40,15 +40,17 @@ const App: React.FC = () => {
   const loadData = async () => {
     try {
       if (isQRCodeAccess) {
-        // CUSTOMER: chỉ cần Tables, Products, Categories - KHÔNG load Orders/Expenses
-        const [t, p, c] = await Promise.all([
+        // CUSTOMER: chỉ cần Tables, Products, Categories + Order của chính bàn đó (tiết kiệm băng thông)
+        const [t, p, c, o] = await Promise.all([
           api.getTables(),
           api.getProducts(),
           api.getCategories(),
+          api.getOrderForTable(selectedTableId)
         ]);
         setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
         setProducts(p);
         setCategories(c);
+        setOrders(o ? [o] : []); // Chỉ nạp 1 đơn của bàn này (phục vụ nút Lịch sử gọi món)
       } else {
         // ADMIN: load đầy đủ
         const [t, p, c, o, e] = await Promise.all([
