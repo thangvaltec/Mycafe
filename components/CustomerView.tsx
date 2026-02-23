@@ -47,6 +47,54 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showWifiQR, setShowWifiQR] = useState(false);
 
+  const [sessionStatus, setSessionStatus] = useState<'VALID' | 'EXPIRED'>('VALID');
+
+  // Soft Session Logic: So sánh Order ID & Billiard Session ID hiện tại với mã đã lưu
+  React.useEffect(() => {
+    // Nếu là Admin thì luôn hợp lệ
+    if (isAdmin) {
+      setSessionStatus('VALID');
+      return;
+    }
+
+    const storedOrderSession = localStorage.getItem(`session_table_${table.id}`);
+    const storedBilliardSession = localStorage.getItem(`billiard_table_${table.id}`);
+
+    const currentOrderId = activeOrder?.id ? String(activeOrder.id) : null;
+    const currentBilliardId = billiardSession?.id ? String(billiardSession.id) : null;
+
+    // 1. Kiểm tra Order
+    if (currentOrderId && !storedOrderSession) {
+      localStorage.setItem(`session_table_${table.id}`, currentOrderId);
+    }
+    // 2. Kiểm tra Billiard
+    if (currentBilliardId && !storedBilliardSession) {
+      localStorage.setItem(`billiard_table_${table.id}`, currentBilliardId);
+    }
+
+    // --- Logic XÁC THỰC ---
+    const hasStoredSomething = storedOrderSession || storedBilliardSession;
+    const hasCurrentSomething = currentOrderId || currentBilliardId;
+
+    if (hasCurrentSomething) {
+      const orderMismatch = storedOrderSession && currentOrderId && (storedOrderSession !== currentOrderId);
+      const billiardMismatch = storedBilliardSession && currentBilliardId && (storedBilliardSession !== currentBilliardId);
+
+      if (orderMismatch || billiardMismatch) {
+        setSessionStatus('EXPIRED');
+      } else {
+        setSessionStatus('VALID');
+      }
+    } else {
+      // Cả hai đều null trên server
+      if (hasStoredSomething) {
+        setSessionStatus('EXPIRED'); // Người dùng cũ quay lại khi bàn đã trống
+      } else {
+        setSessionStatus('VALID');  // Khách mới hoàn toàn
+      }
+    }
+  }, [activeOrder?.id, billiardSession?.id, table.id, isAdmin]);
+
   // Fetch Billiard Session Loop
   React.useEffect(() => {
     const isBilliard = table.alias === 'Bi-a' || (table.tableNumber && table.tableNumber.startsWith('BI-'));
@@ -159,6 +207,35 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       setShowSuccess(false);
     }, 3000);
   };
+
+  if (sessionStatus === 'EXPIRED') {
+    return (
+      <div className="min-h-screen bg-[#FDFCF8] flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="bg-white p-10 rounded-[48px] shadow-2xl border border-[#C2A383]/20 max-w-sm w-full">
+          <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i className="fas fa-check text-3xl text-emerald-500"></i>
+          </div>
+          <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter mb-4 italic">CẢM ƠN QUÝ KHÁCH!</h3>
+          <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider leading-relaxed mb-6">
+            Đơn hàng của quý khách đã hoàn tất thanh toán. Phiên làm việc đã kết thúc.
+          </p>
+          <div className="h-px bg-gray-100 mb-6"></div>
+          <p className="text-[9px] text-[#C2A383] font-black uppercase tracking-widest italic">Hẹn gặp lại quý khách lần sau</p>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem(`session_table_${table.id}`);
+              localStorage.removeItem(`billiard_table_${table.id}`);
+              window.location.reload();
+            }}
+            className="mt-8 text-[10px] text-gray-400 underline font-bold uppercase tracking-widest"
+          >
+            Bắt đầu phiên mới
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] relative max-w-[600px] mx-auto pb-32 animate-fade-in flex flex-col">
