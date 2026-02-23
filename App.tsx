@@ -36,23 +36,35 @@ const App: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial data
+  // Load initial data - phân quyền theo role để tiết kiệm băng thông
   const loadData = async () => {
     try {
-      const [t, p, c, o, e] = await Promise.all([
-        api.getTables(),
-        api.getProducts(),
-        api.getCategories(),
-        api.getOrders(),
-        api.getExpenses()
-      ]);
-      setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
-      setProducts(p);
-      setCategories(c);
-      setOrders(o);
-      setExpenses(e || []);
+      if (isQRCodeAccess) {
+        // CUSTOMER: chỉ cần Tables, Products, Categories - KHÔNG load Orders/Expenses
+        const [t, p, c] = await Promise.all([
+          api.getTables(),
+          api.getProducts(),
+          api.getCategories(),
+        ]);
+        setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
+        setProducts(p);
+        setCategories(c);
+      } else {
+        // ADMIN: load đầy đủ
+        const [t, p, c, o, e] = await Promise.all([
+          api.getTables(),
+          api.getProducts(),
+          api.getCategories(),
+          api.getOrders(),
+          api.getExpenses()
+        ]);
+        setTables(t.sort((a, b) => Number(a.id) - Number(b.id)));
+        setProducts(p);
+        setCategories(c);
+        setOrders(o);
+        setExpenses(e || []);
+      }
 
-      // FIXED: Remove artificial 5-second delay - load immediately!
       setIsLoading(false);
 
     } catch (err) {
@@ -85,10 +97,10 @@ const App: React.FC = () => {
       setIsLoading(false); // If not logged in & not table, stop loading
     }
 
-    // FIXED: Changed from 5s to 30s to prevent connection pool exhaustion
+    // OPTIMIZED: Tăng từ 30s lên 60s để giảm băng thông Neon
     const interval = setInterval(() => {
       if (isLoggedIn || isQRCodeAccess) loadData();
-    }, 30000); // 30 seconds instead of 5 seconds
+    }, 60000); // 60 seconds
 
     return () => {
       clearInterval(interval);

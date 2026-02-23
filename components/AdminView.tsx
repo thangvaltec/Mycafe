@@ -133,6 +133,12 @@ const AdminView: React.FC<AdminViewProps> = ({
             // Replace current toast with the newest one
             dismissToast();
           }
+
+          // OPTIMIZED: Chỉ reload Orders khi thực sự có đơn mới (thay vì polling định kỳ)
+          try {
+            const freshOrders = await api.getOrders();
+            onSetOrders(freshOrders);
+          } catch { /* ignore reload error */ }
         }
       } catch (err) {
         console.log('[NOTIFY] Polling failed (will retry):', err);

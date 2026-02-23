@@ -53,11 +53,21 @@ public class OrderController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllOrders()
+    public async Task<IActionResult> GetAllOrders([FromQuery] bool all = false)
     {
-        var orders = await _context.Orders
+        var today = DateTime.UtcNow.Date;
+        var query = _context.Orders
             .Include(o => o.Items)
-            .Include(o => o.Table) // Optional
+            .Include(o => o.Table)
+            .AsQueryable();
+
+        if (!all)
+        {
+            // Mặc định: chỉ lấy đơn hôm nay HOẶC đơn chưa thanh toán (tiết kiệm băng thông)
+            query = query.Where(o => o.CreatedAt >= today || (o.Status != "PAID" && o.Status != "CANCELLED"));
+        }
+
+        var orders = await query
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
         return Ok(orders);
