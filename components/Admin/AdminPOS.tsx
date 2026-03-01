@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Table, Order, OrderStatus, PaymentMethod } from '../../types';
 
-import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
+import { formatVND, handleMoneyInput, parseVND, formatTime } from '../../utils/format';
 import { api } from '../../services/api';
 import CheckoutModal from './CheckoutModal';
 import { QRCodeSVG } from 'qrcode.react';
@@ -291,11 +291,7 @@ const AdminPOS: React.FC<AdminPOSProps> = ({ tables, orders, onUpdateTable, onUp
                   })
                   .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
                   .map((item) => {
-                    const timeDisplay = new Date(item.orderTime).toLocaleTimeString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    });
+                    const timeDisplay = formatTime(item.orderTime);
 
                     return (
                       <div key={item.originalIndex} className="flex justify-between items-center p-4 rounded-2xl border border-gray-100 shadow-sm odd:bg-[#FAF9F6] even:bg-white">

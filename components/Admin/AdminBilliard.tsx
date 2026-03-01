@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BilliardSession, PaymentMethod, Order, OrderItem, OrderStatus, Table } from '../../types';
-import { formatVND, parseVND } from '../../utils/format';
+import { formatVND, parseVND, formatTime } from '../../utils/format';
 import { api } from '../../services/api';
 import CheckoutModal from './CheckoutModal';
 import BilliardCheckoutModal from './BilliardCheckoutModal';
@@ -15,23 +15,25 @@ interface AdminBilliardProps {
 // Hardcoded tables as per user request (or fetch if we want). Start with user's ID set
 const BILLIARD_TABLE_IDS = ['BI-01', 'BI-02', 'BI-03', 'BI-04'];
 
-const TIME_OPTIONS = Array.from({ length: 96 }).map((_, i) => {
-    const h = Math.floor(i / 4);
-    const m = (i % 4) * 15;
+const TIME_OPTIONS = Array.from({ length: 24 * 12 }).map((_, i) => {
+    const h = Math.floor(i / 12);
+    const m = (i % 12) * 5;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 });
 
-const roundToNearest15 = (date: Date) => {
+const roundToNearest5 = (date: Date) => {
     const minutes = date.getMinutes();
-    const rounded = Math.round(minutes / 15) * 15;
+    const rounded = Math.round(minutes / 5) * 5;
     date.setMinutes(rounded);
     date.setSeconds(0);
     date.setMilliseconds(0);
     return date;
 };
 
-const formatTime15 = (date: Date) => {
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+const formatTime5 = (date: Date) => {
+    // Luôn lấy giờ và phút theo múi giờ Việt Nam
+    const vnTimeStr = date.toLocaleTimeString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
+    return vnTimeStr; // Trả về dạng "HH:mm"
 };
 
 const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, onSetTables }) => {
@@ -141,8 +143,8 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
         setActiveFormTable(tableCode);
         setGuestName('');
         setNumPeople('2');
-        const d = roundToNearest15(new Date());
-        setStartTimeStr(formatTime15(d));
+        const d = roundToNearest5(new Date());
+        setStartTimeStr(formatTime5(d));
     };
 
     const handleStart = async () => {
@@ -173,10 +175,11 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
 
             let finalStartTime = undefined;
             if (startTimeStr) {
-                const [h, m] = startTimeStr.split(':').map(Number);
-                const d = new Date();
-                d.setHours(h, m, 0, 0);
-                finalStartTime = d.toISOString();
+                // Lấy ngày hiện tại theo múi giờ Việt Nam (YYYY-MM-DD)
+                const vnDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+                // Ghép nối với giờ chọn và offset +07:00
+                const vnHook = `${vnDate}T${startTimeStr}:00+07:00`;
+                finalStartTime = new Date(vnHook).toISOString();
             }
 
             const res = await api.startBilliardSession({
@@ -533,11 +536,7 @@ const AdminBilliard: React.FC<AdminBilliardProps> = ({ tables, onOpenOrderView, 
                                     })
                                     .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
                                     .map((item) => {
-                                        const timeDisplay = new Date(item.orderTime).toLocaleTimeString('vi-VN', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            hour12: false
-                                        });
+                                        const timeDisplay = formatTime(item.orderTime);
 
                                         return (
                                             <div key={item.originalIndex} className="flex justify-between items-center p-2.5 rounded-xl border border-gray-100 shadow-sm odd:bg-[#FAF9F6] even:bg-white">

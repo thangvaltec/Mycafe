@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Order, PaymentMethod, Table } from '../../types';
-import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
+import { formatVND, handleMoneyInput, parseVND, formatTime, formatDateVN } from '../../utils/format';
 import { getBankQrUrl, getBankSettings, SUPPORTED_BANKS } from '../../utils/settings';
 import { api } from '../../services/api';
 import { QRCodeSVG } from 'qrcode.react';
@@ -26,9 +26,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
     // Time Adjustment State
     // Default to order.createdAt as start time if not provided separately
     const [adjustedStartTime, setAdjustedStartTime] = useState<string>(
-        startTime || (table && 'startTime' in table ? (table as any).startTime : order.createdAt)
+        startTime || (table && 'startTime' in table ? (table as any).startTime : (order.createdAt || new Date().toISOString()))
     );
-    const [adjustedEndTime, setAdjustedEndTime] = useState<string>(new Date().toISOString());
+    const [adjustedEndTime, setAdjustedEndTime] = useState<string>(() => {
+        const d = new Date();
+        const minutes = d.getMinutes();
+        const rounded = Math.round(minutes / 5) * 5;
+        d.setMinutes(rounded);
+        d.setSeconds(0);
+        d.setMilliseconds(0);
+        return d.toISOString();
+    });
     // Price Per Hour should be passed or inferred. For now, assume fixed or extract from first time item.
     // Hack: Extract price from the existing time fee item if available, else default 20k
     const timeItem = order.items.find(i => i.productId === 'billiard-fee');
@@ -176,24 +184,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
     ].sort((a, b) => a - b).filter((v, i, a) => a.indexOf(v) === i); // Unique & Sorted
 
     // Time Options Generator (00:00 - 23:45)
-    const TIME_OPTIONS = Array.from({ length: 96 }).map((_, i) => {
-        const h = Math.floor(i / 4);
-        const m = (i % 4) * 15;
+    const TIME_OPTIONS = Array.from({ length: 24 * 12 }).map((_, i) => {
+        const h = Math.floor(i / 12);
+        const m = (i % 12) * 5;
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     });
 
     // Helper to get HH:mm from ISO
     const getHHMM = (isoString: string) => {
-        const d = new Date(isoString);
-        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        return formatTime(isoString);
     };
 
-    // Helper to update Time part of ISO
+    // Helper to update Time part of ISO to Vietnam Time (+07:00)
     const updateTimePart = (isoString: string, newTime: string) => {
-        const [h, m] = newTime.split(':').map(Number);
-        const d = new Date(isoString);
-        d.setHours(h, m, 0, 0);
-        return d.toISOString();
+        // isoString format: YYYY-MM-DDTHH:mm:ss.sssZ
+        const datePart = isoString.split('T')[0];
+        // Construct new date string as Vietnam local time, then let Date parse/convert it
+        // format: YYYY-MM-DDTHH:mm:00+07:00
+        const vnHook = `${datePart}T${newTime}:00+07:00`;
+        return new Date(vnHook).toISOString();
     };
 
     return (
@@ -310,7 +319,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ order, table, onClose, on
                                         onChange={e => setAdjustedEndTime(updateTimePart(adjustedEndTime, e.target.value))}
                                         className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs font-bold text-[#4B3621] appearance-none"
                                     >
-                                        {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                                        {TIME_OPTIONS.filter(t => {
+                                            const datePart = adjustedStartTime.split('T')[0];
+                                            const vnHook = `${datePart}T${t}:00+07:00`;
+                                            const itemTime = new Date(vnHook);
+                                            return itemTime.getTime() > new Date(adjustedStartTime).getTime();
+                                        }).map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
                                     <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
                                 </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { Product, Category, Order, OrderItem, OrderStatus, Table, BilliardSession } from '../types';
-import { formatVND, getImageUrl } from '../utils/format';
+import { formatVND, getImageUrl, formatTime } from '../utils/format';
 import { api } from '../services/api';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -364,11 +364,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                     })
                     .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
                     .map((item) => {
-                      const timeDisplay = new Date(item.orderTime).toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                      });
+                      const timeDisplay = formatTime(item.orderTime);
 
                       return (
                         <div key={item.originalIndex} className="flex justify-between items-start group p-2.5 rounded-xl odd:bg-[#F5F0EB] even:bg-white border border-transparent hover:border-[#C2A383]/30 transition-colors mb-0.5">

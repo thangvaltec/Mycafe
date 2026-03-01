@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Order, OrderStatus, Table, PaymentMethod } from '../../types';
 import CheckoutModal from './CheckoutModal';
-import { formatVND } from '../../utils/format';
+import { formatVND, formatTime, formatDateVN } from '../../utils/format';
 import { api } from '../../services/api';
 
 interface AdminOrdersProps {
@@ -98,11 +98,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                       })
                       .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime())
                       .map((item) => {
-                        const timeDisplay = new Date(item.orderTime).toLocaleTimeString('vi-VN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false
-                        });
+                        const timeDisplay = formatTime(item.orderTime);
 
                         return (
                           <div key={item.originalIndex} className="flex justify-between items-center p-1.5 rounded-xl hover:bg-orange-50/50 transition-colors group/item border border-transparent hover:border-orange-100">
@@ -199,7 +195,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   const isTakeaway = table?.alias === 'Takeaway' || table?.tableNumber === 'MV';
                   return (
                     <tr key={order.id} onClick={() => setViewingHistoryOrder(order)} className="hover:bg-[#C2A383]/5 transition-colors cursor-pointer group">
-                      <td className="px-2 md:px-4 py-4 text-xs font-bold text-gray-400 whitespace-nowrap">{new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="px-2 md:px-4 py-4 text-xs font-bold text-gray-400 whitespace-nowrap">{formatTime(order.createdAt)}</td>
                       <td className="px-2 md:px-4 py-4">
                         <div className="flex flex-col">
                           <span className="font-black text-gray-800 text-xs whitespace-nowrap">{isTakeaway ? 'MANG VỀ' : (table?.name || 'Bàn ' + order.tableId)}</span>
@@ -260,9 +256,9 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                 <div className="flex items-center gap-1 mt-1 text-gray-400 font-bold uppercase tracking-widest text-[8px] whitespace-nowrap overflow-hidden">
                   <span>MHĐ: #{viewingHistoryOrder.id.slice(-4)}</span>
                   <span className="opacity-30">|</span>
-                  <span>{new Date(viewingHistoryOrder.createdAt).toLocaleDateString('vi-VN')}</span>
+                  <span>{formatDateVN(viewingHistoryOrder.createdAt)}</span>
                   <span className="opacity-30">|</span>
-                  <span>{new Date(viewingHistoryOrder.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>{formatTime(viewingHistoryOrder.createdAt)}</span>
                 </div>
               </div>
               <button onClick={() => setViewingHistoryOrder(null)} className="w-10 h-10 shrink-0 rounded-full bg-white text-gray-300 flex items-center justify-center shadow-sm hover:text-gray-500 transition-colors"><i className="fas fa-times text-lg"></i></button>

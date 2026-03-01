@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Order, PaymentMethod, Table } from '../../types';
-import { formatVND, parseVND, handleMoneyInput } from '../../utils/format';
+import { formatVND, parseVND, handleMoneyInput, formatTime } from '../../utils/format';
 import { getBankQrUrl, getBankSettings, SUPPORTED_BANKS } from '../../utils/settings';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../../services/api';
@@ -23,7 +23,15 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
 
     // Time State
     const [adjustedStartTime, setAdjustedStartTime] = useState<string>(startTime);
-    const [adjustedEndTime, setAdjustedEndTime] = useState<string>(new Date().toISOString());
+    const [adjustedEndTime, setAdjustedEndTime] = useState<string>(() => {
+        const d = new Date();
+        const minutes = d.getMinutes();
+        const rounded = Math.round(minutes / 5) * 5;
+        d.setMinutes(rounded);
+        d.setSeconds(0);
+        d.setMilliseconds(0);
+        return d.toISOString();
+    });
 
     // Discount State
     const [discountMode, setDiscountMode] = useState<'percent' | 'amount'>('percent');
@@ -84,22 +92,20 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     }, [adjustedStartTime, adjustedEndTime, pricePerHour, order.items, discountMode, discountValue]);
 
     // --- Helpers ---
-    const TIME_OPTIONS = Array.from({ length: 96 }).map((_, i) => {
-        const h = Math.floor(i / 4);
-        const m = (i % 4) * 15;
+    const TIME_OPTIONS = Array.from({ length: 24 * 12 }).map((_, i) => {
+        const h = Math.floor(i / 12);
+        const m = (i % 12) * 5;
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     });
 
     const getHHMM = (isoString: string) => {
-        const d = new Date(isoString);
-        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        return formatTime(isoString);
     };
 
     const updateTimePart = (isoString: string, newTime: string) => {
-        const [h, m] = newTime.split(':').map(Number);
-        const d = new Date(isoString);
-        d.setHours(h, m, 0, 0);
-        return d.toISOString();
+        const datePart = isoString.split('T')[0];
+        const vnHook = `${datePart}T${newTime}:00+07:00`;
+        return new Date(vnHook).toISOString();
     };
 
     const handleConfirmTime = () => {
@@ -272,7 +278,7 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
 
                                                 // If End Time is before or equal to new Start Time, bump it forward
                                                 if (currentEndCheck <= startCheck) {
-                                                    // Default to +1 hour or at least +15 mins
+                                                    // Default to +1 hour or at least +5 mins
                                                     const newEnd = new Date(startCheck + 60 * 60 * 1000);
                                                     setAdjustedEndTime(newEnd.toISOString());
                                                 }
@@ -302,9 +308,9 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                                         >
                                             {/* Only show times AFTER start time */}
                                             {TIME_OPTIONS.filter(t => {
-                                                const [h, m] = t.split(':').map(Number);
-                                                const itemTime = new Date(adjustedStartTime);
-                                                itemTime.setHours(h, m, 0, 0);
+                                                const datePart = adjustedStartTime.split('T')[0];
+                                                const vnHook = `${datePart}T${t}:00+07:00`;
+                                                const itemTime = new Date(vnHook);
                                                 return itemTime.getTime() > new Date(adjustedStartTime).getTime();
                                             }).map(t => <option key={t} value={t}>{t}</option>)}
                                         </select>

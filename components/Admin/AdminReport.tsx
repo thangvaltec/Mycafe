@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Order, Expense, OrderStatus, Table } from '../../types';
-import { formatVND } from '../../utils/format';
+import { formatVND, formatTime, formatDateVN } from '../../utils/format';
 import { api } from '../../services/api';
 
 interface AdminReportProps {
@@ -485,8 +485,8 @@ const AdminReport: React.FC<AdminReportProps> = ({ tables }) => {
               ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).map((item: any, idx) => (
                 <tr key={idx} className="group hover:bg-[#FAF9F6] transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-black text-[#4B3621]">{new Date(item.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                    <span className="text-[9px] font-bold text-gray-300 block mt-0.5">{new Date(item.time).toLocaleDateString('vi-VN')}</span>
+                    <span className="text-sm font-black text-[#4B3621]">{formatTime(item.time)}</span>
+                    <span className="text-[9px] font-bold text-gray-300 block mt-0.5">{formatDateVN(item.time)}</span>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${item.type === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'

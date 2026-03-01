@@ -5,6 +5,31 @@ export const formatVND = (amount: number): string => {
   return new Intl.NumberFormat('vi-VN').format(amount);
 };
 
+// Luôn hiển thị giờ theo múi giờ Việt Nam (UTC+7) – bất kể máy chủ hay máy ở đâu
+const VN_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+export const formatTime = (dateStr: string | Date | undefined | null): string => {
+  if (!dateStr) return '--:--';
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return '--:--';
+  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VN_TIMEZONE });
+};
+
+export const formatDateVN = (dateStr: string | Date | undefined | null): string => {
+  if (!dateStr) return '--/--/----';
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return '--/--/----';
+  return d.toLocaleDateString('vi-VN', { timeZone: VN_TIMEZONE });
+};
+
+export const formatDateTimeVN = (dateStr: string | Date | undefined | null): string => {
+  if (!dateStr) return '--:-- --/--/----';
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return '--:-- --/--/----';
+  return `${formatTime(d)} ${formatDateVN(d)}`;
+};
+
+
 export const parseVND = (formattedValue: string): number => {
   // Loại bỏ tất cả ký tự không phải số (bao gồm dấu chấm, phẩy của định dạng cũ)
   return parseInt(formattedValue.replace(/\D/g, '')) || 0;

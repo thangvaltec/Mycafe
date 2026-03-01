@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Expense } from '../../types';
-import { formatVND, handleMoneyInput, parseVND } from '../../utils/format';
+import { formatVND, handleMoneyInput, parseVND, formatTime, formatDateVN } from '../../utils/format';
 
 interface AdminExpensesProps {
   expenses: Expense[];
@@ -261,7 +261,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ expenses, onAddExpense, o
                       <div className="flex items-center gap-1 mt-0.5">
                         <i className="fas fa-clock text-[9px] text-gray-300"></i>
                         <span className="text-[9px] font-bold text-gray-400 truncate">
-                          {new Date(ex.date).toLocaleDateString('vi-VN')} - {new Date(ex.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          {formatDateVN(ex.date)} - {formatTime(ex.date)}
                         </span>
                       </div>
                     </div>

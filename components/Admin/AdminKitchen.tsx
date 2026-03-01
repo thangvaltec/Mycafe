@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Order, OrderStatus, Table } from '../../types';
-import { formatVND } from '../../utils/format';
+import { formatVND, formatTime } from '../../utils/format';
 import { api } from '../../services/api';
 
 interface AdminKitchenProps {
@@ -58,7 +58,7 @@ const AdminKitchen: React.FC<AdminKitchenProps> = ({ orders, tables, onUpdateOrd
                                     <h3 className="text-xl font-black text-[#4B3621]">{tableName}</h3>
                                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">#{order.orderNumber}</span>
                                 </div>
-                                <span className="text-2xl font-black text-[#C2A383]">{new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="text-2xl font-black text-[#C2A383]">{formatTime(order.createdAt)}</span>
                             </div>
 
                             <div className="space-y-3 mb-6 flex-1">
