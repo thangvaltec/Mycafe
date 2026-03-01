@@ -47,9 +47,42 @@ public class OrderController : ControllerBase
             {
                 tableId = n.TableId,
                 tableName = n.TableName,
+                type = n.Type,
                 items = n.Items
             })
         });
+    }
+
+    // ===== SERVICE CALLS (Payment/Staff Call) =====
+    [HttpPost("service-call")]
+    public async Task<IActionResult> ServiceCall([FromBody] ServiceCallRequest request)
+    {
+        var table = await _context.Tables.FindAsync(request.TableId);
+        if (table == null) return NotFound("Table not found");
+
+        lock (_lock)
+        {
+            _notifications.Add(new OrderNotification
+            {
+                Time = DateTime.UtcNow,
+                TableId = table.Id,
+                TableName = table.Name ?? $"Bàn {table.Id}",
+                Type = request.Type, // PAYMENT or SERVICE
+                Items = new List<NotificationItem>()
+            });
+
+            // Auto-clean
+            var cutoff = DateTime.UtcNow.AddMinutes(-5);
+            _notifications.RemoveAll(n => n.Time < cutoff);
+        }
+
+        return Ok(new { success = true });
+    }
+
+    public class ServiceCallRequest
+    {
+        public int TableId { get; set; }
+        public string Type { get; set; } = "SERVICE";
     }
 
     [HttpGet]
@@ -296,6 +329,7 @@ public class OrderNotification
     public DateTime Time { get; set; }
     public int TableId { get; set; }
     public string TableName { get; set; } = "";
+    public string Type { get; set; } = "ORDER"; // NEW: ORDER, PAYMENT, SERVICE
     public List<NotificationItem> Items { get; set; } = new();
 }
 

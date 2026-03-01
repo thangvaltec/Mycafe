@@ -53,19 +53,24 @@ const AdminView: React.FC<AdminViewProps> = ({
   interface ToastData {
     tableName: string;
     tableId: number;
+    type: string; // ORDER, PAYMENT, SERVICE
     items: Array<{ name: string; quantity: number }>;
   }
   const [currentToast, setCurrentToast] = useState<ToastData | null>(null);
   const toastQueueRef = useRef<ToastData[]>([]);
   const lastCheckTimeRef = useRef<string>(new Date().toISOString());
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
-  // Initialize audio element once
+  // Initialize audio elements once
   useEffect(() => {
-    audioRef.current = new Audio('/sounds/notification.mp3');
-    audioRef.current.volume = 0.7;
+    audioRefs.current = {
+      ORDER: new Audio('/sounds/notification.mp3'),
+      PAYMENT: new Audio('/sounds/payment.mp3'),
+      SERVICE: new Audio('/sounds/service.mp3')
+    };
+    Object.values(audioRefs.current).forEach(a => a.volume = 0.7);
   }, []);
 
   // Show the next toast from the queue
@@ -80,10 +85,25 @@ const AdminView: React.FC<AdminViewProps> = ({
       const next = toastQueueRef.current.shift()!;
       setCurrentToast(next);
 
-      // Play sound for each new toast
-      if (isSoundEnabled && audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => { });
+      // Play sound for each new toast based on type
+      if (isSoundEnabled) {
+        const audio = audioRefs.current[next.type] || audioRefs.current['ORDER'];
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play().catch(() => { });
+
+
+          // NEW: Repeat 2 times for PAYMENT and SERVICE
+          if (next.type === 'PAYMENT' || next.type === 'SERVICE') {
+            setTimeout(() => {
+              if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(() => { });
+              }
+            }, 2000); // Khoảng cách giữa 2 lần phát là 1.5s
+          }
+
+        }
       }
 
       // Auto-dismiss after 20 seconds, then show next
@@ -121,6 +141,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           const newToasts: ToastData[] = result.orders.map(o => ({
             tableName: o.tableName || 'Bàn ' + o.tableId,
             tableId: o.tableId,
+            type: (o as any).type || 'ORDER',
             items: o.items || []
           }));
 
@@ -134,10 +155,13 @@ const AdminView: React.FC<AdminViewProps> = ({
             dismissToast();
           }
 
-          // OPTIMIZED: Chỉ reload Orders khi thực sự có đơn mới (thay vì polling định kỳ)
+          // OPTIMIZED: Chỉ reload Orders khi thực sự có đơn mới
           try {
-            const freshOrders = await api.getOrders();
-            onSetOrders(freshOrders);
+            // Only reload full order list if there's at least one ORDER type notification
+            if (result.orders.some((o: any) => o.type === 'ORDER' || !o.type)) {
+              const freshOrders = await api.getOrders();
+              onSetOrders(freshOrders);
+            }
           } catch { /* ignore reload error */ }
         }
       } catch (err) {
@@ -280,9 +304,9 @@ const AdminView: React.FC<AdminViewProps> = ({
               onClick={() => {
                 setIsSoundEnabled(!isSoundEnabled);
                 // Play a short test sound when enabling
-                if (!isSoundEnabled && audioRef.current) {
-                  audioRef.current.currentTime = 0;
-                  audioRef.current.play().catch(() => { });
+                if (!isSoundEnabled && audioRefs.current['ORDER']) {
+                  audioRefs.current['ORDER'].currentTime = 0;
+                  audioRefs.current['ORDER'].play().catch(() => { });
                 }
               }}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border shadow-sm active:scale-95 ${isSoundEnabled
@@ -388,15 +412,17 @@ const AdminView: React.FC<AdminViewProps> = ({
       {/* ===== TOAST NOTIFICATION POPUP ===== */}
       {currentToast && (
         <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-[200] animate-slide-in-right">
-          <div className="bg-white border-2 border-amber-300 rounded-2xl shadow-2xl px-5 py-4 min-w-[300px] max-w-[420px]">
+          <div className={`bg-white border-2 ${currentToast.type === 'PAYMENT' ? 'border-emerald-500' : currentToast.type === 'SERVICE' ? 'border-blue-500' : 'border-amber-300'} rounded-2xl shadow-2xl px-5 py-4 min-w-[300px] max-w-[420px]`}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                <i className="fas fa-concierge-bell text-amber-600 text-lg"></i>
+              <div className={`w-10 h-10 ${currentToast.type === 'PAYMENT' ? 'bg-emerald-100' : currentToast.type === 'SERVICE' ? 'bg-blue-100' : 'bg-amber-100'} rounded-xl flex items-center justify-center shrink-0 mt-0.5`}>
+                <i className={`fas ${currentToast.type === 'PAYMENT' ? 'fa-receipt text-emerald-600' : currentToast.type === 'SERVICE' ? 'fa-user-nurse text-blue-600' : 'fa-concierge-bell text-amber-600'} text-lg`}></i>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Đơn hàng mới</p>
+                <p className={`text-[10px] font-black ${currentToast.type === 'PAYMENT' ? 'text-emerald-600' : currentToast.type === 'SERVICE' ? 'text-blue-600' : 'text-amber-600'} uppercase tracking-widest`}>
+                  {currentToast.type === 'PAYMENT' ? 'Yêu cầu thanh toán' : currentToast.type === 'SERVICE' ? 'Gọi phục vụ' : 'Đơn hàng mới'}
+                </p>
                 <p className="text-sm font-bold text-[#4B3621] mt-0.5">
-                  🔔 {currentToast.tableName} vừa gọi món!
+                  {currentToast.type === 'PAYMENT' ? `💰 ${currentToast.tableName} gọi thanh toán!` : currentToast.type === 'SERVICE' ? `🙋 ${currentToast.tableName} cần hỗ trợ!` : `🔔 ${currentToast.tableName} vừa gọi món!`}
                 </p>
                 {currentToast.items.length > 0 && (
                   <div className="mt-2 space-y-0.5">

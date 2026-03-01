@@ -132,6 +132,7 @@ export const api = {
         orders: Array<{
             tableId: number,
             tableName: string,
+            type: string,
             items: Array<{ name: string, quantity: number }>
         }>
     }>(`/order/check-new?lastCheckTime=${encodeURIComponent(lastCheckTime)}`),
@@ -224,6 +225,11 @@ export const api = {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
     },
+    serviceCall: (tableId: number, type: 'PAYMENT' | 'SERVICE') => fetchApi('/order/service-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tableId, type })
+    }),
 };
 
 const mapToProduct = (item: any): Product => ({

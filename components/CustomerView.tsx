@@ -44,6 +44,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   const [billiardSession, setBilliardSession] = useState<BilliardSession | null>(null);
   const [durationStr, setDurationStr] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loadingCall, setLoadingCall] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showWifiQR, setShowWifiQR] = useState(false);
 
@@ -212,6 +213,40 @@ const CustomerView: React.FC<CustomerViewProps> = ({
     }, 3000);
   };
 
+  const handleServiceCall = async (type: 'PAYMENT' | 'SERVICE') => {
+    // 1. Kiểm tra xem có gì để thanh toán không (áp dụng cho PAYMENT)
+    const hasActiveOrder = activeOrder && activeOrder.items.length > 0;
+    const hasBilliard = !!billiardSession;
+    const hasAnything = hasActiveOrder || hasBilliard;
+
+    if (type === 'PAYMENT' && !hasAnything) {
+      alert("Bạn chưa có đơn hàng hoặc giờ chơi nào để thanh toán.");
+      return;
+    }
+
+    if (type === 'PAYMENT') {
+      // Chuyển hướng sang màn hình lịch sử để khách xem lại trước
+      setShowHistory(true);
+      return;
+    }
+
+    // 2. Gọi nhân viên: Cần xác nhận
+    if (type === 'SERVICE') {
+      if (!window.confirm("Bạn muốn gọi nhân viên hỗ trợ?")) return;
+    }
+
+    setLoadingCall(true);
+    try {
+      await api.serviceCall(table.id, type);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      alert("Không thể gửi yêu cầu. Vui lòng thử lại!");
+    } finally {
+      setLoadingCall(false);
+    }
+  };
+
   if (sessionStatus === 'EXPIRED') {
     return (
       <div className="min-h-screen bg-[#FDFCF8] flex flex-col items-center justify-center p-6 text-center animate-fade-in">
@@ -301,6 +336,30 @@ const CustomerView: React.FC<CustomerViewProps> = ({
           </div>
         </header>
       )}
+
+      {/* Service Call Buttons */}
+      <div className="bg-white/80 backdrop-blur-md px-3 py-2 flex gap-2 sticky top-[48px] z-[110] border-b border-gray-100 shadow-sm shrink-0">
+        <button
+          onClick={() => handleServiceCall('PAYMENT')}
+          disabled={loadingCall}
+          className="flex-1 bg-emerald-50 active:bg-emerald-100 border border-emerald-200 py-1.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+        >
+          <div className="w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+            <i className="fas fa-receipt text-white text-[10px]"></i>
+          </div>
+          <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tighter">Thanh toán</span>
+        </button>
+        <button
+          onClick={() => handleServiceCall('SERVICE')}
+          disabled={loadingCall}
+          className="flex-1 bg-blue-50 active:bg-blue-100 border border-blue-200 py-1.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+        >
+          <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm shrink-0">
+            <i className="fas fa-user-nurse text-white text-[10px]"></i>
+          </div>
+          <span className="text-[10px] font-black text-blue-700 uppercase tracking-tighter">Gọi nhân viên</span>
+        </button>
+      </div>
 
       {/* 2. CHỌN NHANH DANH MỤC (SẼ TRÔI ĐI KHI CUỘN) */}
       <section className="px-3 mt-4">
@@ -408,12 +467,35 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="w-full mt-3 py-3 bg-[#4B3621] text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-[#3E2C1B] transition-colors shrink-0 shadow-lg active:scale-95"
-                >
-                  Đóng lịch sử
-                </button>
+                <div className="mt-3 space-y-2 shrink-0">
+                  <button
+                    disabled={loadingCall}
+                    onClick={async () => {
+                      setLoadingCall(true);
+                      try {
+                        await api.serviceCall(table.id, 'PAYMENT');
+                        setShowHistory(false);
+                        setShowSuccess(true);
+                        setTimeout(() => setShowSuccess(false), 3000);
+                      } catch (err) {
+                        alert("Không thể gửi yêu cầu. Vui lòng thử lại!");
+                      } finally {
+                        setLoadingCall(false);
+                      }
+                    }}
+                    className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <i className="fas fa-check-circle"></i>
+                    Xác nhận gọi thanh toán
+                  </button>
+
+                  <button
+                    onClick={() => setShowHistory(false)}
+                    className="w-full py-3 bg-gray-100 text-[#4B3621] rounded-xl font-black text-[11px] uppercase tracking-widest transition-colors shadow-sm active:scale-95"
+                  >
+                    Đóng lịch sử
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -562,7 +644,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
               <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i className="fas fa-check text-3xl text-emerald-500"></i>
               </div>
-              <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter mb-2">ĐẶT MÓN THÀNH CÔNG!</h3>
+              <h3 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter mb-2">GỬI YÊU CẦU THÀNH CÔNG!</h3>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-relaxed">
                 Yêu cầu của quý khách đã được gửi đi. Vui lòng đợi trong giây lát!
               </p>
