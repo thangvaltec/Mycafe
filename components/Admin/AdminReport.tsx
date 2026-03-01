@@ -1,7 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Order, Expense, OrderStatus, Table } from '../../types';
 import { formatVND } from '../../utils/format';
+import { api } from '../../services/api';
 
 interface AdminReportProps {
   orders: Order[];
@@ -12,7 +13,32 @@ interface AdminReportProps {
   onSetTables: (tables: Table[]) => void;
 }
 
-const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) => {
+const AdminReport: React.FC<AdminReportProps> = ({ tables }) => {
+  const [localOrders, setLocalOrders] = useState<Order[]>([]);
+  const [localExpenses, setLocalExpenses] = useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Tải dữ liệu lịch sử độc lập, không bị ghi đè bởi POS auto-refresh
+  const loadHistoryData = async () => {
+    setIsLoading(true);
+    try {
+      const [o, e] = await Promise.all([
+        api.getOrdersHistory(),
+        api.getExpenses()
+      ]);
+      setLocalOrders(o);
+      setLocalExpenses(e);
+    } catch (err) {
+      console.warn('[Báo cáo] Lỗi khi tải lịch sử đơn hàng:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadHistoryData(); }, []);
+
+  const orders = localOrders;
+  const expenses = localExpenses;
   // Fix Date Timezone bug: Use local date construction
   const getLocalDateStr = (d: Date = new Date()) => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -159,7 +185,12 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
     document.body.removeChild(link);
   };
 
-  if (!orders || !expenses) return <div>Đang tải dữ liệu báo cáo...</div>;
+  if (isLoading) return (
+    <div className="h-full flex flex-col items-center justify-center gap-3 text-[#C2A383] py-20">
+      <i className="fas fa-spinner fa-spin text-3xl"></i>
+      <p className="font-bold text-sm animate-pulse">Đang nạp dữ liệu báo cáo...</p>
+    </div>
+  );
 
   return (
     <div className="h-full flex flex-col gap-4 p-2 md:p-0" style={{ minHeight: '500px' }}>
@@ -243,7 +274,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
               <i className="fas fa-file-csv text-xs"></i>
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => loadHistoryData()}
               className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center border border-gray-100"
             >
               <i className="fas fa-sync-alt text-[10px]"></i>
@@ -284,7 +315,7 @@ const AdminReport: React.FC<AdminReportProps> = ({ orders, expenses, tables }) =
                 <i className="fas fa-file-csv text-lg"></i> Xuất Excel
               </button>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => loadHistoryData()}
                 className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:bg-[#C2A383] hover:text-white flex items-center justify-center transition-all"
                 title="Làm mới dữ liệu"
               >

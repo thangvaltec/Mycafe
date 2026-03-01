@@ -138,6 +138,7 @@ export const api = {
 
     // Orders
     getOrders: () => fetchApi<Order[]>('/order'),
+    getOrdersHistory: () => fetchApi<Order[]>('/order?all=true'), // Dùng cho Báo cáo – lấy đầy đủ lịch sử
     getOrderForTable: (tableId: string) => fetchApi<Order>(`/order/table/${tableId}`).catch(() => null),
     placeOrder: (tableId: string | number, items: { productId: string, productName: string, price: number, quantity: number }[]) =>
         fetchApi<Order>('/order', {
