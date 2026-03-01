@@ -142,7 +142,8 @@ public class OrderController : ControllerBase
                 if (product != null)
                 {
                     finalPrice = product.Price;
-                    finalName = product.Name; // Ensure name is correct too
+                    // Only use DB name if Frontend didn't provide a custom one (like with notes)
+                    finalName = string.IsNullOrEmpty(itemDto.ProductName) ? product.Name : itemDto.ProductName;
                 }
             }
             

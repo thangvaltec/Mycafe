@@ -48,6 +48,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
   const [showWifiQR, setShowWifiQR] = useState(false);
 
   const [sessionStatus, setSessionStatus] = useState<'VALID' | 'EXPIRED'>('VALID');
+  const [itemNotes, setItemNotes] = useState<{ [key: string]: string }>({});
 
   // Soft Session Logic: So sánh Order ID & Billiard Session ID hiện tại với mã đã lưu
   React.useEffect(() => {
@@ -176,9 +177,11 @@ const CustomerView: React.FC<CustomerViewProps> = ({
     Object.entries(selectedItems).forEach(([pid, qty]) => {
       const p = products.find(prod => String(prod.id) === String(pid));
       if (p) {
+        const note = itemNotes[pid];
+        const productName = note ? `${p.name} (Ghi chú: ${note})` : p.name;
         validItems.push({
           productId: pid,
-          productName: p.name,
+          productName: productName,
           price: p.price,
           quantity: qty as number
         });
@@ -198,6 +201,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
     onPlaceOrder(validItems);
     setSelectedItems({}); // Clear cart
+    setItemNotes({}); // Clear notes
     localStorage.removeItem(`cart_table_${table.id}`); // Clear storage
     setShowSheet(false);
 
@@ -386,7 +390,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                             <div className="w-5 h-5 shrink-0 rounded-lg bg-white text-[#4B3621] flex items-center justify-center font-black text-[9px] border border-gray-100 italic transition-transform group-hover:scale-110 shadow-sm">
                               {item.quantity}
                             </div>
-                            <span className="text-[11px] font-black text-[#4B3621] leading-tight mt-0.5 truncate">{item.productName}</span>
+                            <span className="text-[11px] font-black text-[#4B3621] leading-tight mt-0.5">{item.productName}</span>
                           </div>
                           <span className="text-[11px] font-black text-[#C2A383] tracking-tighter mt-0.5 whitespace-nowrap ml-2">{formatVND(item.price * item.quantity)}đ</span>
                         </div>
@@ -509,17 +513,30 @@ const CustomerView: React.FC<CustomerViewProps> = ({
                 const p = products.find(prod => prod.id === pid)!;
                 return (
                   <div key={pid} className="flex justify-between items-center p-2.5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex-1 flex items-center gap-3 min-w-0">
                       <img src={getImageUrl(p.imageUrl)} className="w-10 h-10 rounded-xl object-cover shadow-sm shrink-0" alt="" />
-                      <div className="min-w-0">
+                      <div className="flex-1 min-w-0">
                         <p className="font-black text-[#4B3621] text-xs leading-tight mb-0.5 truncate">{p.name}</p>
-                        <p className="text-[10px] text-[#C2A383] font-black tracking-tighter">{formatVND(p.price)}đ</p>
+                        <p className="text-[10px] text-[#C2A383] font-black tracking-tighter mb-1.5">{formatVND(p.price)}đ</p>
+
+                        {/* Note Input - Expanded */}
+                        <div className="relative overflow-hidden h-7 w-full bg-[#F5F0EB] border border-transparent focus-within:border-[#C2A383] rounded-lg transition-all">
+                          <input
+                            type="text"
+                            placeholder="Thêm ghi chú:ít đá,đường.."
+                            value={itemNotes[pid] || ''}
+                            onChange={(e) => setItemNotes({ ...itemNotes, [pid]: e.target.value })}
+                            className="absolute top-0 left-0 w-[133%] h-full bg-transparent pl-2 pr-2 text-[16px] font-bold text-[#4B3621] outline-none placeholder:text-gray-400/60 origin-top-left scale-[0.75]"
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100 shrink-0">
-                      <button onClick={() => update(pid, -1)} className="w-7 h-7 rounded-lg bg-white text-gray-400 flex items-center justify-center shadow-sm active:bg-gray-100"><i className="fas fa-minus text-[7px]"></i></button>
-                      <span className="font-black text-xs w-4 text-center text-[#4B3621]">{qty}</span>
-                      <button onClick={() => update(pid, 1)} className="w-7 h-7 rounded-lg bg-[#4B3621] text-white flex items-center justify-center shadow-md active:bg-[#C2A383]"><i className="fas fa-plus text-[7px]"></i></button>
+                    <div className="flex flex-col items-center gap-2 ml-2 shrink-0">
+                      <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100 shrink-0">
+                        <button onClick={() => update(pid, -1)} className="w-7 h-7 rounded-lg bg-white text-gray-400 flex items-center justify-center shadow-sm active:bg-gray-100"><i className="fas fa-minus text-[7px]"></i></button>
+                        <span className="font-black text-xs w-4 text-center text-[#4B3621]">{qty}</span>
+                        <button onClick={() => update(pid, 1)} className="w-7 h-7 rounded-lg bg-[#4B3621] text-white flex items-center justify-center shadow-md active:bg-[#C2A383]"><i className="fas fa-plus text-[7px]"></i></button>
+                      </div>
                     </div>
                   </div>
                 );

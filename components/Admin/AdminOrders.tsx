@@ -272,7 +272,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                     <div key={idx} className="py-2.5 flex justify-between items-center gap-2">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-6 h-6 shrink-0 rounded-lg bg-[#FAF9F6] flex items-center justify-center text-[9px] font-black text-[#C2A383] border border-gray-100">{item.quantity}</div>
-                        <span className="font-black text-[#4B3621] text-xs truncate">{item.productName}</span>
+                        <span className="font-black text-[#4B3621] text-xs">{item.productName}</span>
                       </div>
                       <span className="font-bold text-gray-500 text-xs whitespace-nowrap">{formatVND(item.price * item.quantity)}đ</span>
                     </div>
