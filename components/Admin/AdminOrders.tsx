@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Order, OrderStatus, Table, PaymentMethod } from '../../types';
 import CheckoutModal from './CheckoutModal';
-import { formatVND, formatTime, formatDateVN } from '../../utils/format';
+import { formatVND, formatTime, formatDateVN, formatDateTimeVN } from '../../utils/format';
 import { api } from '../../services/api';
 
 interface AdminOrdersProps {
@@ -309,8 +309,93 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
               </div>
             </div>
 
-            <div className="px-6 pb-8">
-              <button onClick={() => setViewingHistoryOrder(null)} className="w-full py-4 bg-[#4B3621] text-white rounded-[20px] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-[#3E2C1B] active:scale-[0.98] transition-all">Đóng chi tiết</button>
+            {/* HIDDEN PRINT AREA */}
+            <div id="history-print-receipt" className="hidden print:block font-mono text-[11px] text-black bg-white">
+              <style>{`
+                @media print {
+                  body * { visibility: hidden !important; }
+                  #history-print-receipt, #history-print-receipt * { visibility: visible !important; }
+                  #history-print-receipt {
+                    position: fixed !important;
+                    left: 0 !important; top: 0 !important;
+                    width: 58mm !important;
+                    padding: 4mm !important;
+                    font-size: 9pt !important;
+                    font-family: 'Courier New', monospace !important;
+                    display: block !important;
+                    color: #000 !important;
+                    background: #fff !important;
+                  }
+                  @page { size: 58mm auto; margin: 0; }
+                }
+              `}</style>
+              {/* HEADER */}
+              <div className="text-center border-b border-dashed border-black pb-2 mb-2">
+                <p className="font-bold text-[13px]">BỐNG COFFEE</p>
+                <p className="text-[9px]">Sân Vườn &amp; Billiards</p>
+                <p className="text-[8px]">ĐC: [Ngã Tư Yên Lạc-Thạch Lạc]</p>
+                <p className="text-[8px]">ĐT: [0886-660-123]</p>
+              </div>
+              {/* INFO */}
+              <div className="mb-2 pb-2 border-b border-dashed border-black">
+                <div className="flex justify-between"><span className="font-bold">Bàn:</span><span className="font-bold">{(() => { const t = tables.find(t => t.id === viewingHistoryOrder?.tableId); return t?.alias === 'Takeaway' ? 'MANG VỀ' : (t?.name || 'Bàn ' + viewingHistoryOrder?.tableId); })()}</span></div>
+                {/* <div className="flex justify-between"><span>MHĐ #:</span><span>#{viewingHistoryOrder?.id.slice(-4)}</span></div> */}
+                <div className="flex justify-between"><span>Thời gian:</span><span>{viewingHistoryOrder ? formatDateTimeVN(viewingHistoryOrder.createdAt) : ''}</span></div>
+              </div>
+              {/* ITEMS */}
+              <div className="mb-2 pb-2 border-b border-dashed border-black">
+                {viewingHistoryOrder?.items.map((item, idx) => (
+                  <div key={idx} className="mb-1">
+                    <div className="flex justify-between">
+                      <span className="flex-1 pr-1 leading-tight">{item.productName}</span>
+                      <span className="whitespace-nowrap font-bold">{formatVND(item.price * item.quantity)}đ</span>
+                    </div>
+                    <div className="text-[8px] pl-1">{item.quantity} x {formatVND(item.price)}đ</div>
+                  </div>
+                ))}
+              </div>
+              {/* TOTALS */}
+              <div className="mb-2 pb-2 border-b border-dashed border-black space-y-0.5">
+                {viewingHistoryOrder?.discountAmount && viewingHistoryOrder.discountAmount > 0 && (
+                  <>
+                    <div className="flex justify-between"><span>Tạm tính:</span><span>{formatVND(viewingHistoryOrder.totalAmount)}đ</span></div>
+                    <div className="flex justify-between"><span>Giảm giá:</span><span>-{formatVND(viewingHistoryOrder.discountAmount)}đ</span></div>
+                  </>
+                )}
+                <div className="flex justify-between font-bold text-[13px] mt-1">
+                  <span>TỔNG CỘNG:</span>
+                  <span>{viewingHistoryOrder ? formatVND(viewingHistoryOrder.totalAmount - (viewingHistoryOrder.discountAmount || 0)) : ''}đ</span>
+                </div>
+              </div>
+              {/* PAYMENT */}
+              <div className="mb-2 pb-2 border-b border-dashed border-black space-y-0.5">
+                <div className="flex justify-between">
+                  <span>Hình thức TT:</span>
+                  <span className="font-bold">{viewingHistoryOrder?.paymentMethod === PaymentMethod.CASH ? 'Tiền mặt' : 'Chuyển khoản'}</span>
+                </div>
+                {viewingHistoryOrder?.paymentMethod === PaymentMethod.CASH && (
+                  <div className="flex justify-between font-bold">
+                    <span>Tiền thừa:</span>
+                    <span>{formatVND(viewingHistoryOrder.changeAmount || 0)}đ</span>
+                  </div>
+                )}
+              </div>
+              {/* FOOTER */}
+              <div className="text-center text-[8px] mt-2">
+                <p className="font-bold">Cảm ơn quý khách!</p>
+                <p>Hẹn gặp lại lần sau</p>
+                <p className="mt-1 text-[7px]">{viewingHistoryOrder ? formatDateTimeVN(viewingHistoryOrder.createdAt) : ''}</p>
+              </div>
+            </div>
+
+            <div className="px-6 pb-8 flex gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-4 bg-emerald-600 text-white rounded-[20px] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                <i className="fas fa-print"></i> In hóa đơn
+              </button>
+              <button onClick={() => setViewingHistoryOrder(null)} className="flex-1 py-4 bg-[#4B3621] text-white rounded-[20px] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-[#3E2C1B] active:scale-[0.98] transition-all">Đóng chi tiết</button>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { formatVND, parseVND, handleMoneyInput, formatTime } from '../../utils/f
 import { getBankQrUrl, getBankSettings, SUPPORTED_BANKS } from '../../utils/settings';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../../services/api';
+import PrintReceipt, { triggerPrint } from './PrintReceipt';
 
 interface BilliardCheckoutModalProps {
     order: Order;
@@ -44,6 +45,12 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     const [receivedAmountStr, setReceivedAmountStr] = useState<string>('');
     const receivedAmount = parseVND(receivedAmountStr);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentDone, setPaymentDone] = useState<{
+        method: PaymentMethod;
+        received: number;
+        finalTotal: number;
+        discount: number;
+    } | null>(null);
 
     // --- Calculation Logic ---
     const calculations = useMemo(() => {
@@ -137,16 +144,22 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     const executePayment = async () => {
         setIsSubmitting(true);
         try {
+            const method = activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER;
             await api.billiardCheckout(
                 Number(table.id),
-                activeTab === 'cash' ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER,
+                method,
                 activeTab === 'cash' ? receivedAmount : calculations.totalAmount,
                 adjustedStartTime,
                 adjustedEndTime,
-                calculations.discountAmount // Pass calculated discount
+                calculations.discountAmount
             );
-            alert("✅ Thanh toán thành công!");
-            onSuccess();
+            // Show print confirmation instead of alert
+            setPaymentDone({
+                method,
+                received: activeTab === 'cash' ? receivedAmount : calculations.totalAmount,
+                finalTotal: calculations.totalAmount,
+                discount: calculations.discountAmount
+            });
         } catch (err: any) {
             alert("❌ Lỗi thanh toán: " + (err.message || err));
             setIsSubmitting(false);
@@ -180,7 +193,53 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 overflow-y-auto">
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity" onClick={onClose}></div>
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity" onClick={paymentDone ? undefined : onClose}></div>
+
+            {/* ===== PRINT CONFIRMATION SCREEN (after payment) ===== */}
+            {paymentDone && (
+                <>
+                    <PrintReceipt
+                        order={order}
+                        tableName={table.name}
+                        paymentMethod={paymentDone.method}
+                        receivedAmount={paymentDone.received}
+                        discountAmount={paymentDone.discount}
+                        finalTotal={paymentDone.finalTotal}
+                        startTime={adjustedStartTime}
+                        endTime={adjustedEndTime}
+                    />
+                    <div className="relative bg-white rounded-[32px] shadow-2xl p-8 max-w-sm w-full text-center animate-slide-up">
+                        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <i className="fas fa-check text-3xl text-emerald-500"></i>
+                        </div>
+                        <h2 className="text-xl font-black text-[#4B3621] uppercase tracking-tighter mb-1">Thanh toán thành công!</h2>
+                        <p className="text-[11px] text-gray-400 mb-2">
+                            Tổng cộng: <span className="font-black text-[#4B3621]">{formatVND(paymentDone.finalTotal)}đ</span>
+                        </p>
+                        {paymentDone.method === PaymentMethod.CASH && paymentDone.received > paymentDone.finalTotal && (
+                            <p className="text-[11px] text-emerald-600 font-bold mb-2">
+                                Tiền thừa: {formatVND(paymentDone.received - paymentDone.finalTotal)}đ
+                            </p>
+                        )}
+                        <div className="mt-6 space-y-3">
+                            <button
+                                onClick={() => triggerPrint()}
+                                className="w-full py-4 bg-[#4B3621] text-white rounded-[18px] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all"
+                            >
+                                <i className="fas fa-print"></i>
+                                In hóa đơn
+                            </button>
+                            <button
+                                onClick={onSuccess}
+                                className="w-full py-3 bg-gray-100 text-[#4B3621] rounded-[18px] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                <i className="fas fa-times"></i>
+                                Đóng (không in)
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* PASSWORD MODAL OVERLAY */}
             {showPasswordPrompt && (
@@ -211,7 +270,7 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                 </div>
             )}
 
-            <div className={`relative w-full bg-[#FAF9F6] rounded-[32px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 animate-slide-up bg-white my-auto
+            {!paymentDone && <div className={`relative w-full bg-[#FAF9F6] rounded-[32px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 animate-slide-up bg-white my-auto
                 ${step === 'payment' ? 'max-w-lg md:max-w-5xl md:flex-row md:h-[600px]' : 'max-w-lg'}`}>
 
                 {/* --- LEFT COLUMN: TIME VERIFICATION & BILL SUMMARY --- */}
@@ -558,7 +617,7 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                         </div>
                     </div>
                 )}
-            </div>
+            </div>}
         </div>
     );
 };
