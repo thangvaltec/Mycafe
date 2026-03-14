@@ -566,7 +566,7 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       {showScrollTop && (
         <button
           onClick={handleBackToTop}
-          className="fixed right-3 bottom-24 sm:bottom-10 z-[200] bg-[#4B3621]/90 text-white rounded-xl shadow-xl backdrop-blur-sm transition-all active:scale-95 hover:bg-[#4B3621] flex items-center gap-2 py-2.5 px-4 animate-fade-in border border-white/20"
+          className="fixed right-3 bottom-36 sm:bottom-20 z-[200] bg-amber-600 text-white rounded-xl shadow-xl backdrop-blur-sm transition-all active:scale-95 hover:bg-amber-700 flex items-center gap-2 py-2.5 px-4 animate-fade-in border border-white/20"
         >
           <i className="fas fa-chevron-up text-xs"></i>
           <span className="text-[10px] font-black tracking-wide whitespace-nowrap">VỀ ĐẦU TRANG</span>
