@@ -225,6 +225,5 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             throw; 
         }
     }
-    
-    }
+
 app.Run();
