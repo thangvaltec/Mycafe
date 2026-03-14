@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PROJECT 1: MYCAFE (Current Project)
+  # ============================================
+  db-mycafe:
+    image: postgres:15-alpine
+    container_name: db-mycafe
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_MYCAFE_PASSWORD:-supersecret_mycafe}
+      POSTGRES_DB: mycafe_db
+    volumes:
+      - pgdata_mycafe:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+
+  api-mycafe:
+    build: 
+      context: ./MyCafe.Backend # Build from current folder
+      dockerfile: Dockerfile
+    container_name: api-mycafe
+    depends_on:
+      - db-mycafe
+    environment:
+      - DATABASE_URL=Host=db-mycafe;Port=5432;Username=postgres;Password=${DB_MYCAFE_PASSWORD:-supersecret_mycafe};Database=mycafe_db;SslMode=Disable;
+      - PORT=8080
+    ports:
+      - "5001:8080"
+    restart: unless-stopped
+
+  # ============================================
+  # PROJECT 2: OTHER STORE (Different Codebase)
+  # ============================================
+  db-otherstore:
+    image: postgres:15-alpine
+    container_name: db-otherstore
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_OTHERSTORE_PASSWORD:-supersecret_otherstore}
+      POSTGRES_DB: otherstore_db
+    volumes:
+      - pgdata_otherstore:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+
+  api-otherstore:
+    build: 
+      # You will clone the second project into an 'OtherStore' folder next to 'Mycafe'
+      context: ../OtherStore.Backend 
+      dockerfile: Dockerfile
+    container_name: api-otherstore
+    depends_on:
+      - db-otherstore
+    environment:
+      - DATABASE_URL=Host=db-otherstore;Port=5432;Username=postgres;Password=${DB_OTHERSTORE_PASSWORD:-supersecret_otherstore};Database=otherstore_db;SslMode=Disable;
+      - PORT=8080
+    ports:
+      - "5002:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata_mycafe:
+  pgdata_otherstore:
