@@ -2,8 +2,8 @@ name: Keep Backend Alive
 
 on:
   schedule:
-    # Chạy mỗi 14 phút, từ 8h sáng đến 12h tối (giờ Việt Nam UTC+7 -> 1h-15h UTC)
-    - cron: '*/14 1-17 * * *'
+    # Chạy mỗi 10 phút, 24/7 để giữ cả Render và Aiven luôn thức
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -12,8 +12,8 @@ jobs:
     steps:
       - name: Ping All Services
         run: |
-          # Ping Render Backend (Chỉ ping endpoint nhẹ, KHÔNG đánh thức Neon DB)
-          curl -I https://mycafe-backend-prx3.onrender.com/ping
+          # Ping Render Backend & Aiven DB (Đánh thức cả 2 ông)
+          curl -I https://mycafe-backend-prx3.onrender.com/ping/db
           # Ping Vercel Frontend
           curl -I https://mycafe-omega.vercel.app/
           echo "Pings completed successfully at $(date)!"
