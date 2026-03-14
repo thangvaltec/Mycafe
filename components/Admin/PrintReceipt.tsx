@@ -23,6 +23,17 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({
     const billiardItem = order.items.find(i => i.productId === 'billiard-fee');
     const isBilliard = !!billiardItem;
 
+    // Compute actual billiard duration & fee from checkout times (not stale order data)
+    const menuFee = menuItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const actualTimeFee = isBilliard ? Math.max(0, finalTotal + (discountAmount || 0) - menuFee) : 0;
+    let durationStr = '';
+    if (isBilliard && startTime && endTime) {
+        const mins = Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
+        durationStr = `Tiền giờ (${Math.floor(mins / 60)}h ${mins % 60}m)`;
+    } else if (billiardItem) {
+        durationStr = billiardItem.productName;
+    }
+
     return (
         <div id="print-receipt" className="hidden print:block font-mono text-[11px] text-black bg-white">
             {/* 
@@ -88,8 +99,8 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({
                 <div className="mb-2 pb-2 border-b border-dashed border-black">
                     <p className="font-bold text-[9px] uppercase tracking-widest mb-1">⏱ Phí giờ chơi</p>
                     <div className="flex justify-between">
-                        <span className="flex-1 pr-1 leading-tight">{billiardItem.productName}</span>
-                        <span className="whitespace-nowrap font-bold">{formatVND(billiardItem.price)}đ</span>
+                        <span className="flex-1 pr-1 leading-tight">{durationStr}</span>
+                        <span className="whitespace-nowrap font-bold">{formatVND(actualTimeFee)}đ</span>
                     </div>
                 </div>
             )}

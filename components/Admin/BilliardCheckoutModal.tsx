@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Order, PaymentMethod, Table } from '../../types';
-import { formatVND, parseVND, handleMoneyInput, formatTime } from '../../utils/format';
+import { formatVND, parseVND, handleMoneyInput } from '../../utils/format';
 import { getBankQrUrl, getBankSettings, SUPPORTED_BANKS } from '../../utils/settings';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../../services/api';
@@ -23,16 +23,26 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     const [step, setStep] = useState<'verify' | 'payment'>('verify');
 
     // Time State
-    const [adjustedStartTime, setAdjustedStartTime] = useState<string>(startTime);
-    const [adjustedEndTime, setAdjustedEndTime] = useState<string>(() => {
-        const d = new Date();
-        const minutes = d.getMinutes();
-        const rounded = Math.round(minutes / 5) * 5;
-        d.setMinutes(rounded);
-        d.setSeconds(0);
-        d.setMilliseconds(0);
-        return d.toISOString();
+    // Convert ISO -> "HH:MM" in Vietnam timezone
+    const isoToHHMM = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', {
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh'
     });
+    // Convert "HH:MM" + reference ISO date -> ISO (using VN date from refISO)
+    const hhmmToISO = (hhmm: string, refISO: string) => {
+        const datePart = new Date(refISO).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+        return new Date(`${datePart}T${hhmm}:00+07:00`).toISOString();
+    };
+
+    const [startHHMM, setStartHHMM] = useState<string>(() => isoToHHMM(startTime));
+    const [endHHMM, setEndHHMM] = useState<string>(() => {
+        const d = new Date();
+        const min = Math.round(d.getMinutes() / 5) * 5;
+        d.setMinutes(min); d.setSeconds(0); d.setMilliseconds(0);
+        return isoToHHMM(d.toISOString());
+    });
+    // Computed ISO strings (always correct VN timezone)
+    const adjustedStartTime = hhmmToISO(startHHMM, startTime);
+    const adjustedEndTime = hhmmToISO(endHHMM, new Date().toISOString());
 
     // Discount State
     const [discountMode, setDiscountMode] = useState<'percent' | 'amount'>('percent');
@@ -99,21 +109,7 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
     }, [adjustedStartTime, adjustedEndTime, pricePerHour, order.items, discountMode, discountValue]);
 
     // --- Helpers ---
-    const TIME_OPTIONS = Array.from({ length: 24 * 12 }).map((_, i) => {
-        const h = Math.floor(i / 12);
-        const m = (i % 12) * 5;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    });
 
-    const getHHMM = (isoString: string) => {
-        return formatTime(isoString);
-    };
-
-    const updateTimePart = (isoString: string, newTime: string) => {
-        const datePart = isoString.split('T')[0];
-        const vnHook = `${datePart}T${newTime}:00+07:00`;
-        return new Date(vnHook).toISOString();
-    };
 
     const handleConfirmTime = () => {
         if (calculations.totalAmount <= 0 && calculations.subTotal > 0 && calculations.discountAmount < calculations.subTotal) {
@@ -324,31 +320,22 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
                             <div className="grid grid-cols-2 gap-4 relative">
                                 <div>
                                     <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 pl-1">Bắt đầu</label>
-                                    <div className="relative">
-                                        <select
-                                            value={getHHMM(adjustedStartTime)}
-                                            onChange={e => {
-                                                const newStart = updateTimePart(adjustedStartTime, e.target.value);
-                                                setAdjustedStartTime(newStart);
-
-                                                // Intelligent Auto-Correction logic
-                                                const startCheck = new Date(newStart).getTime();
-                                                const currentEndCheck = new Date(adjustedEndTime).getTime();
-
-                                                // If End Time is before or equal to new Start Time, bump it forward
-                                                if (currentEndCheck <= startCheck) {
-                                                    // Default to +1 hour or at least +5 mins
-                                                    const newEnd = new Date(startCheck + 60 * 60 * 1000);
-                                                    setAdjustedEndTime(newEnd.toISOString());
-                                                }
-                                            }}
-                                            disabled={step === 'payment'}
-                                            className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-black text-[#4B3621] appearance-none disabled:bg-gray-50 focus:border-[#C2A383] outline-none shadow-sm"
-                                        >
-                                            {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                                        </select>
-                                        <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs pointer-events-none"></i>
-                                    </div>
+                                    <input
+                                        type="time"
+                                        value={startHHMM}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (!val) return;
+                                            setStartHHMM(val);
+                                            if (val >= endHHMM) {
+                                                const [h, m] = val.split(':').map(Number);
+                                                const bumped = new Date(0, 0, 0, h + 1, m);
+                                                setEndHHMM(`${String(bumped.getHours()).padStart(2, '0')}:${String(bumped.getMinutes()).padStart(2, '0')}`);
+                                            }
+                                        }}
+                                        disabled={step === 'payment'}
+                                        className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-black text-[#4B3621] disabled:bg-gray-50 focus:border-[#C2A383] outline-none shadow-sm"
+                                    />
                                 </div>
 
                                 {/* Connector Line */}
@@ -358,23 +345,17 @@ const BilliardCheckoutModal: React.FC<BilliardCheckoutModalProps> = ({
 
                                 <div>
                                     <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 pl-1">Kết thúc</label>
-                                    <div className="relative">
-                                        <select
-                                            value={getHHMM(adjustedEndTime)}
-                                            onChange={e => setAdjustedEndTime(updateTimePart(adjustedEndTime, e.target.value))}
-                                            disabled={step === 'payment'}
-                                            className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-black text-[#4B3621] appearance-none disabled:bg-gray-50 focus:border-[#C2A383] outline-none shadow-sm"
-                                        >
-                                            {/* Only show times AFTER start time */}
-                                            {TIME_OPTIONS.filter(t => {
-                                                const datePart = adjustedStartTime.split('T')[0];
-                                                const vnHook = `${datePart}T${t}:00+07:00`;
-                                                const itemTime = new Date(vnHook);
-                                                return itemTime.getTime() > new Date(adjustedStartTime).getTime();
-                                            }).map(t => <option key={t} value={t}>{t}</option>)}
-                                        </select>
-                                        <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs pointer-events-none"></i>
-                                    </div>
+                                    <input
+                                        type="time"
+                                        value={endHHMM}
+                                        min={startHHMM}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val && val > startHHMM) setEndHHMM(val);
+                                        }}
+                                        disabled={step === 'payment'}
+                                        className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-black text-[#4B3621] disabled:bg-gray-50 focus:border-[#C2A383] outline-none shadow-sm"
+                                    />
                                 </div>
                             </div>
 

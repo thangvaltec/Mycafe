@@ -79,7 +79,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                     </div>
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">{formatVND(order.totalAmount - (order.discountAmount || 0))}đ</span>
-                      {order.discountAmount && order.discountAmount > 0 && (
+                      {order.discountAmount > 0 && (
                         <span className="text-[8px] font-bold text-red-500 line-through opacity-50">{formatVND(order.totalAmount)}đ</span>
                       )}
                       <span className="text-[8px] font-black text-gray-400 uppercase">{getStatusLabel(order.status)}</span>
@@ -210,7 +210,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                       <td className="px-2 md:px-4 py-4 text-right font-black text-[#4B3621] whitespace-nowrap text-xs md:text-sm">
                         <div className="flex flex-col items-end">
                           <span>{formatVND(order.totalAmount - (order.discountAmount || 0))}đ</span>
-                          {order.discountAmount && order.discountAmount > 0 && (
+                          {order.discountAmount > 0 && (
                             <span className="text-[9px] font-bold text-red-500 line-through opacity-50">{formatVND(order.totalAmount)}đ</span>
                           )}
                         </div>
@@ -288,7 +288,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
                   <span className="text-xl font-black text-[#4B3621]">{formatVND(viewingHistoryOrder.totalAmount)}đ</span>
                 </div>
 
-                {viewingHistoryOrder.discountAmount && viewingHistoryOrder.discountAmount > 0 && (
+                {viewingHistoryOrder.discountAmount > 0 && (
                   <div className="flex justify-between items-center py-1 border-y border-dashed border-gray-200">
                     <span className="text-red-400 font-bold text-[8px] uppercase tracking-widest">ĐÃ GIẢM:</span>
                     <span className="text-base font-black text-red-500">-{formatVND(viewingHistoryOrder.discountAmount)}đ</span>
@@ -356,7 +356,7 @@ const AdminOrders: React.FC<AdminOrdersProps> = ({ orders, tables, onUpdateOrder
               </div>
               {/* TOTALS */}
               <div className="mb-2 pb-2 border-b border-dashed border-black space-y-0.5">
-                {viewingHistoryOrder?.discountAmount && viewingHistoryOrder.discountAmount > 0 && (
+                {viewingHistoryOrder.discountAmount > 0 && (
                   <>
                     <div className="flex justify-between"><span>Tạm tính:</span><span>{formatVND(viewingHistoryOrder.totalAmount)}đ</span></div>
                     <div className="flex justify-between"><span>Giảm giá:</span><span>-{formatVND(viewingHistoryOrder.discountAmount)}đ</span></div>
