@@ -1,8 +1,8 @@
 # HƯỚNG DẪN VẬN HÀNH & CẬP NHẬT (MYCAFE)
-db supabase git 
+db aiven google
 frontend vercel git
 backend api render git
-phanthangvaltec@gmail.com Txxxx1xxx@
+phanthangvaltec@gmail.com Thang1997@
 Dưới đây là các câu lệnh cần thiết để chạy lại dự án sau khi bạn sửa code.
 
 ## 1. Phần Giao Diện (Frontend)

@@ -38,6 +38,7 @@ const App: React.FC = () => {
 
   // Load initial data - phân quyền theo role để tiết kiệm băng thông
   const loadData = async () => {
+    setIsLoading(true);
     try {
       if (isQRCodeAccess) {
         // CUSTOMER: chỉ cần Tables, Products, Categories + Order của chính bàn đó (tiết kiệm băng thông)
@@ -291,18 +292,11 @@ const App: React.FC = () => {
     );
   }
 
-  const [showLoader, setShowLoader] = useState(false);
 
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => setShowLoader(true), 200); // Only show after 200ms
-      return () => clearTimeout(timer);
-    } else {
-      setShowLoader(false);
-    }
-  }, [isLoading]);
 
-  if (isLoading && showLoader) {
+
+
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
