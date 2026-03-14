@@ -47,16 +47,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             Password = userInfo[1],
             Database = uri.AbsolutePath.TrimStart('/'),
             SslMode = Npgsql.SslMode.Require,
-            // AGGRESSIVE Configuration for Supabase Free Tier
-            // Port 6543 = Transaction Mode (No Pooling, No AutoPrepare)
-            // Port 5432 = Session Mode (MUST LIMIT POOL SIZE AGGRESSIVELY)
-            Pooling = uri.Port == 5432,
-            MaxPoolSize = uri.Port == 5432 ? 2 : 0, // Reverted to 2 for better performance - user will minimize logins
+            // AGGRESSIVE Configuration for Aiven Free Tier (Max 20 Connections)
+            Pooling = true,
+            MaxPoolSize = 15, // CRITICAL: Aiven Free limits to 20. We reserve 5 for manual queries (DBeaver)
             MinPoolSize = 0, // Don't keep idle connections
-            ConnectionLifetime = 300, // 5 minutes - Force connection refresh to prevent stale connections
+            ConnectionLifetime = 300, // 5 minutes - Force connection refresh
             ConnectionIdleLifetime = 60, // Close idle connections after 60 seconds
-            MaxAutoPrepare = uri.Port == 5432 ? 10 : 0, // Reduced from 20 to save memory
-            Timeout = 60, // Connection timeout: 60 seconds (was default 15s)
+            MaxAutoPrepare = 10,
+            Timeout = 60, // Connection timeout: 60 seconds
             CommandTimeout = 60 // Command timeout: 60 seconds
         };
         connString = connBuilder.ToString();
@@ -204,5 +202,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             throw; 
         }
     }
+    
+    // Unified Keep-Alive Endpoint for both Render & Aiven
+    app.MapGet("/ping/db", async (AppDbContext db) => {
+        try {
+            await db.Database.CanConnectAsync();
+            return Results.Ok(new { status = "awake", db = "connected", timestamp = DateTime.UtcNow });
+        } catch (Exception ex) {
+            return Results.Problem($"Backend is awake, but DB failed: {ex.Message}");
+        }
+    });
 
 app.Run();
