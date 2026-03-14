@@ -133,13 +133,30 @@ const CustomerView: React.FC<CustomerViewProps> = ({
 
   // Scroll detection for scroll-to-top button
   React.useEffect(() => {
-    const handleScroll = () => {
-      // Show button when scrolled past category section (~250px)
-      setShowScrollTop(window.scrollY > 250);
+    const handleScroll = (e: any) => {
+      // In Admin mode, scrolling happens on a parent div, not the window.
+      // e.target.scrollTop works for elements, window.scrollY for window.
+      const scrollPos = e.target.scrollTop !== undefined ? e.target.scrollTop : window.scrollY;
+      setShowScrollTop(scrollPos > 300);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    // Use capture: true to catch scroll events from children (Admin's fixed container)
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
   }, []);
+
+  const handleBackToTop = () => {
+    // Find the scrolling container. In Admin view it's a fixed div, in Customer view it's the window.
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Fallback for nested containers (Admin mode) - find the closest scrolling element
+      const scrollingElement = document.querySelector('.bg-white.overflow-y-auto');
+      if (scrollingElement) {
+        scrollingElement.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
 
 
 
@@ -548,8 +565,8 @@ const CustomerView: React.FC<CustomerViewProps> = ({
       {/* SCROLL TO TOP BUTTON */}
       {showScrollTop && (
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed right-3 top-24 z-[100] bg-[#4B3621]/90 text-white rounded-xl shadow-xl backdrop-blur-sm transition-all active:scale-95 hover:bg-[#4B3621] flex items-center gap-2 py-2.5 px-4 animate-fade-in border border-white/20"
+          onClick={handleBackToTop}
+          className="fixed right-3 bottom-24 sm:bottom-10 z-[200] bg-[#4B3621]/90 text-white rounded-xl shadow-xl backdrop-blur-sm transition-all active:scale-95 hover:bg-[#4B3621] flex items-center gap-2 py-2.5 px-4 animate-fade-in border border-white/20"
         >
           <i className="fas fa-chevron-up text-xs"></i>
           <span className="text-[10px] font-black tracking-wide whitespace-nowrap">VỀ ĐẦU TRANG</span>
