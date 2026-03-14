@@ -291,7 +291,18 @@ const App: React.FC = () => {
     );
   }
 
-  if (isLoading) {
+  const [showLoader, setShowLoader] = useState(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => setShowLoader(true), 200); // Only show after 200ms
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(false);
+    }
+  }, [isLoading]);
+
+  if (isLoading && showLoader) {
     return <LoadingScreen />;
   }
 

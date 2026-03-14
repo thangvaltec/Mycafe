@@ -72,7 +72,7 @@ const LoadingScreen: React.FC = () => {
                             { id: 3, color: '#cc0000', sink: 'sink-3' },
                             { id: 9, color: '#ffeb3b', sink: 'sink-9' }
                         ].map(ball => (
-                            <div key={ball.id} className={`absolute w-9 h-9 rounded-full shadow-xl flex items-center justify-center border border-white/5 z-20 -translate-x-1/2 -translate-y-1/2`} style={{ backgroundColor: ball.color, animation: `${ball.sink} 6s infinite cubic-bezier(0.165, 0.84, 0.44, 1)` }}>
+                            <div key={ball.id} className={`absolute w-9 h-9 rounded-full shadow-xl flex items-center justify-center border border-white/5 z-20 -translate-x-1/2 -translate-y-1/2`} style={{ backgroundColor: ball.color, animation: `${ball.sink} 2s infinite cubic-bezier(0.165, 0.84, 0.44, 1)` }}>
                                 <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-[7px] font-black text-black">{ball.id}</div>
                             </div>
                         ))}
@@ -184,11 +184,11 @@ const LoadingScreen: React.FC = () => {
           0%, 100% { transform: translateY(0) scaleX(1); opacity: 0; }
           50% { transform: translateY(-35px) scaleX(1.8); opacity: 0.5; }
         }
-        .animate-player-fade { animation: player-fade 6s infinite ease-in-out; }
-        .animate-perfect-cue { animation: perfect-cue 6s infinite cubic-bezier(0.19, 1, 0.22, 1); }
-        .animate-perfect-cue-ball { animation: perfect-cue-ball 6s infinite cubic-bezier(0.1, 0, 0.1, 1); }
-        .animate-brand-glow { animation: brand-glow 6s infinite cubic-bezier(0.23, 1, 0.32, 1); }
-        .animate-elegant-steam { animation: elegant-steam 3s infinite ease-in-out; }
+        .animate-player-fade { animation: player-fade 2s infinite ease-in-out; }
+        .animate-perfect-cue { animation: perfect-cue 2s infinite cubic-bezier(0.19, 1, 0.22, 1); }
+        .animate-perfect-cue-ball { animation: perfect-cue-ball 2s infinite cubic-bezier(0.1, 0, 0.1, 1); }
+        .animate-brand-glow { animation: brand-glow 2s infinite cubic-bezier(0.23, 1, 0.32, 1); }
+        .animate-elegant-steam { animation: elegant-steam 1s infinite ease-in-out; }
         .animate-fade-in { animation: fadeIn 2s ease-out both; }
 
         @keyframes fadeIn {
