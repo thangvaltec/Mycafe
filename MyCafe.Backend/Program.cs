@@ -207,7 +207,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     app.MapGet("/ping/db", async (AppDbContext db) => {
         try {
             await db.Database.CanConnectAsync();
-            return Results.Ok(new { status = "awake", db = "connected", timestamp = DateTime.UtcNow });
+            var conn = db.Database.GetDbConnection();
+            var host = conn.DataSource.Split(',')[0].Split(';').FirstOrDefault(x => x.Contains("Host="))?.Split('=')[1] ?? "unknown";
+            // More robust extraction for Npgsql
+            if (host == "unknown" && conn.ConnectionString.Contains("Host=")) {
+                 var parts = conn.ConnectionString.Split(';');
+                 host = parts.FirstOrDefault(p => p.Trim().StartsWith("Host=", StringComparison.OrdinalIgnoreCase))?.Split('=')[1];
+            }
+            
+            return Results.Ok(new { 
+                status = "awake", 
+                db = "connected", 
+                db_host = host, // Helps user verify if it's Aiven or Neon
+                timestamp = DateTime.UtcNow 
+            });
         } catch (Exception ex) {
             return Results.Problem($"Backend is awake, but DB failed: {ex.Message}");
         }
