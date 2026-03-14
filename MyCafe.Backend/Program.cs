@@ -90,11 +90,34 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
     app.UseCors("AllowAll");
     app.UseStaticFiles(); 
-    app.MapControllers();
-    
+
     // Lightweight ping endpoint for keep-alive (does NOT touch database)
     app.MapGet("/ping", () => Results.Ok(new { status = "alive", time = DateTime.UtcNow }));
-    
+
+    // Unified Keep-Alive Endpoint for both Render & Aiven
+    app.MapGet("/ping/db", async (AppDbContext db) => {
+        try {
+            await db.Database.CanConnectAsync();
+            var conn = db.Database.GetDbConnection();
+            var host = conn.DataSource.Split(',')[0].Split(';').FirstOrDefault(x => x.Contains("Host="))?.Split('=')[1] ?? "unknown";
+            // More robust extraction for Npgsql
+            if (host == "unknown" && conn.ConnectionString.Contains("Host=")) {
+                 var parts = conn.ConnectionString.Split(';');
+                 host = parts.FirstOrDefault(p => p.Trim().StartsWith("Host=", StringComparison.OrdinalIgnoreCase))?.Split('=')[1];
+            }
+            
+            return Results.Ok(new { 
+                status = "awake", 
+                db = "connected", 
+                db_host = host, // Helps user verify if it's Aiven or Neon
+                timestamp = DateTime.UtcNow 
+            });
+        } catch (Exception ex) {
+            return Results.Problem($"Backend is awake, but DB failed: {ex.Message}");
+        }
+    });
+
+    app.MapControllers();
     app.MapFallbackToFile("index.html");
 
     // Ensure DB is created & Seed Data
@@ -203,27 +226,5 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         }
     }
     
-    // Unified Keep-Alive Endpoint for both Render & Aiven
-    app.MapGet("/ping/db", async (AppDbContext db) => {
-        try {
-            await db.Database.CanConnectAsync();
-            var conn = db.Database.GetDbConnection();
-            var host = conn.DataSource.Split(',')[0].Split(';').FirstOrDefault(x => x.Contains("Host="))?.Split('=')[1] ?? "unknown";
-            // More robust extraction for Npgsql
-            if (host == "unknown" && conn.ConnectionString.Contains("Host=")) {
-                 var parts = conn.ConnectionString.Split(';');
-                 host = parts.FirstOrDefault(p => p.Trim().StartsWith("Host=", StringComparison.OrdinalIgnoreCase))?.Split('=')[1];
-            }
-            
-            return Results.Ok(new { 
-                status = "awake", 
-                db = "connected", 
-                db_host = host, // Helps user verify if it's Aiven or Neon
-                timestamp = DateTime.UtcNow 
-            });
-        } catch (Exception ex) {
-            return Results.Problem($"Backend is awake, but DB failed: {ex.Message}");
-        }
-    });
-
+    }
 app.Run();
