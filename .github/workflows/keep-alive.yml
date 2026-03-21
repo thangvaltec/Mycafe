@@ -3,7 +3,7 @@ name: Keep Backend Alive
 on:
   schedule:
     # Chạy mỗi 10 phút, 24/7 để giữ cả Render và Aiven luôn thức
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
